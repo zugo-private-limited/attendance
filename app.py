@@ -1,3 +1,4 @@
+import os
 import uvicorn
 import csv
 import io
@@ -30,9 +31,29 @@ async def lifespan(app: FastAPI):
     print("Application shutdown...")
 
 app = FastAPI(title="Zugo Attendance Management System", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key="a_very_secret_key_change_me")
+import os
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY", "change_me_in_production_use_strong_random_key"))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+# Set absolute paths for Render compatibility
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+app = FastAPI()
+
+# Mount static files (do not change this path on Render)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Jinja2 Templates setup
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# --- Quick Render test route ---
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
 
 @app.get("/", response_class=HTMLResponse, summary="Display login page")
@@ -50,7 +71,7 @@ async def handle_login(request: Request, email: str = Form(...), password: str =
             return RedirectResponse(url="/hr-management", status_code=status.HTTP_303_SEE_OTHER)
         return RedirectResponse(url="/report", status_code=status.HTTP_303_SEE_OTHER)
     
-    return RedirectResponse(url="/? error=Invalid+Credentials", status_code=status. HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/?error=Invalid+Credentials", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/signup", response_class=HTMLResponse, summary="Handle new user registration")
 async def signup(
@@ -62,11 +83,11 @@ async def signup(
 ):
     """Registers a new employee."""
     if fetch_employee_by_email(db, email):
-        return templates. TemplateResponse("login.html", {"request": request, "error": "Email already registered"})
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Email already registered"})
     
     user_data = static_users.get(email)
     if user_data:
-        name = user_data. get("name", name)
+        name = user_data.get("name", name)
         photo = user_data.get("photo", "profile.jpg")
         phone = user_data.get("phone")
         parent_phone = user_data.get("parent_phone")
@@ -106,7 +127,7 @@ async def report(request: Request, db: mysql.connector.MySQLConnection = Depends
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     if user_email == config.HR_EMAIL:
-        return RedirectResponse(url="/hr-management", status_code=status. HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/hr-management", status_code=status.HTTP_303_SEE_OTHER)
 
     user_data = fetch_employee_by_email(db, user_email) or _build_user_from_static(user_email)
     if not user_data:
@@ -135,7 +156,7 @@ async def report(request: Request, db: mysql.connector.MySQLConnection = Depends
 @app.get("/download_report", summary="Download attendance report as CSV")
 async def download_report(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
     """Return a CSV file of the user's attendance report (last 30 days)."""
-    user_email = request.session. get("user_email")
+    user_email = request.session.get("user_email")
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -145,18 +166,18 @@ async def download_report(request: Request, db: mysql.connector.MySQLConnection 
     writer = csv.writer(output)
     writer.writerow(["Day", "Check In", "Check Out", "Total Hours"])
     for row in report_data:
-        writer.writerow([row. get("day"), row.get("check_in"), row.get("check_out"), row.get("total_hours")])
+        writer.writerow([row.get("day"), row.get("check_in"), row.get("check_out"), row.get("total_hours")])
 
     csv_content = output.getvalue()
     output.close()
 
-    filename = f"attendance_{user_email. replace('@', '_at_')}.csv"
+    filename = f"attendance_{user_email.replace('@', '_at_')}.csv"
     return Response(content=csv_content, media_type="text/csv", headers={
         "Content-Disposition":  f"attachment; filename={filename}"
     })
 
 @app.get("/dashboard", response_class=HTMLResponse, name="dashboard_view", summary="Display employee dashboard (profile view)")
-async def dashboard_view(request: Request, db: mysql. connector.MySQLConnection = Depends(get_db_connection)):
+async def dashboard_view(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
     """Render dashboard.html showing the employee's full profile."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -193,7 +214,7 @@ async def handle_attendance(
     try:
         if not is_at_office(float(latitude), float(longitude)):
             return RedirectResponse(
-                url=f"/report?error=Location+outside+office+bounds: +{latitude:. 6f},+{longitude:.6f}",
+                url=f"/report?error=Location+outside+office+bounds: +{latitude:.6f},+{longitude:.6f}",
                 status_code=status.HTTP_303_SEE_OTHER
             )
     except ValueError:
@@ -225,7 +246,7 @@ async def handle_attendance(
         if not (is_morning or is_afternoon):
             return RedirectResponse(
                 url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+at+{config.CHECKIN_AFTERNOON_EXACT}",
-                status_code=status. HTTP_303_SEE_OTHER
+                status_code=status.HTTP_303_SEE_OTHER
             )
 
         if any(r['action'] == 'check-in' for r in todays_records):
@@ -238,13 +259,13 @@ async def handle_attendance(
         if current_time < config.CHECKOUT_MIN_TIME:
             return RedirectResponse(
                 url=f"/report?error=Check-out+only+allowed+after+{config.CHECKOUT_MIN_TIME}",
-                status_code=status. HTTP_303_SEE_OTHER
+                status_code=status.HTTP_303_SEE_OTHER
             )
 
         if not any(r['action'] == 'check-in' for r in todays_records):
             return RedirectResponse(
                 url="/report?error=Must+check-in+before+checking+out",
-                status_code=status. HTTP_303_SEE_OTHER
+                status_code=status.HTTP_303_SEE_OTHER
             )
 
         if any(r['action'] == 'check-out' for r in todays_records):
@@ -261,7 +282,7 @@ async def handle_attendance(
             (user_email, action, event_time, latitude, longitude, location_text)
             VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (user_email, action, now, latitude, longitude, f"{latitude:. 6f}, {longitude:.6f}")
+            (user_email, action, now, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}")
         )
         db.commit()
         cursor.close()
@@ -296,7 +317,7 @@ async def employees_page(request: Request, db: mysql.connector.MySQLConnection =
         
     is_hr = user_email == config.HR_EMAIL
     all_employees = fetch_all_employees(db)
-    all_employees = [emp for emp in all_employees if emp. get("email") != config.HR_EMAIL]
+    all_employees = [emp for emp in all_employees if emp.get("email") != config.HR_EMAIL]
     
     try:
         cursor = db.cursor()
@@ -321,7 +342,7 @@ async def employees_page(request: Request, db: mysql.connector.MySQLConnection =
             if is_hr:
                 emp["salary"] = None
                 
-    return templates. TemplateResponse("employee_list.html", {
+    return templates.TemplateResponse("employee_list.html", {
         "request": request,
         "employees": all_employees,
         "is_hr": is_hr
@@ -443,7 +464,7 @@ async def delete_employee(
     db: mysql.connector. MySQLConnection = Depends(get_db_connection)
 ):
     """Delete an employee (HR only)."""
-    user_email = request.session. get("user_email")
+    user_email = request.session.get("user_email")
     if not user_email or user_email != config.HR_EMAIL:  
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
@@ -481,13 +502,13 @@ async def manual_attendance(
         if not employee:
             return RedirectResponse(
                 url="/hr-management?error=Employee not found",
-                status_code=status. HTTP_303_SEE_OTHER
+                status_code=status.HTTP_303_SEE_OTHER
             )
         
         if action not in ["check-in", "check-out"]:
             return RedirectResponse(
                 url="/hr-management?error=Invalid action",
-                status_code=status. HTTP_303_SEE_OTHER
+                status_code=status.HTTP_303_SEE_OTHER
             )
         
         try:
@@ -549,7 +570,7 @@ def _build_user_from_static(email):
         "email": u.get("email", email),
         "photo": u.get("photo", "profile.jpg"),
         "phone": u.get("phone"),
-        "employee_number": u. get("employee_number"),
+        "employee_number": u.get("employee_number"),
         "aadhar":  u.get("aadhar") or u.get("AADHAR"),
         "dob": u.get("dob"),
         "gender": u.get("gender"),
@@ -616,4 +637,11 @@ def _build_report_for_user(db, user_email, days:  int = 30):
 # ===========================================================================
 
 if __name__ == "__main__":  
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    # For local development
+    if os.getenv("DEBUG", "False").lower() == "true":
+        uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    else:
+        # For cloud deployment
+        port = int(os.getenv("PORT", "8000"))
+        host = os.getenv("HOST", "127.0.0.1")
+        uvicorn.run("app:app", host=host, port=port) 

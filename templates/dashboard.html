@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Profile</title>
+  <link rel="shortcut icon" href="{{ url_for('static', path='favicon.ico') }}" type="/static/zugo logo.png">
+  <link rel="stylesheet" href="{{ url_for('static', path='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='report.css') }}">
+  
+  <script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    function showPosition(position) {
+        document.getElementById("latitude_checkin").value = position.coords. latitude;
+        document.getElementById("longitude_checkin").value = position.coords.longitude;
+        document.getElementById("latitude_checkout").value = position.coords.latitude;
+        document.getElementById("longitude_checkout").value = position.coords.longitude;
+    }
+
+    function showError(error) {
+        switch(error.code) {
+            case error.PERMISSION_DENIED: 
+                alert("User denied the request for Geolocation.  Cannot track attendance.");
+                break;
+            case error.POSITION_UNAVAILABLE:
+                alert("Location information is unavailable.");
+                break;
+            case error.TIMEOUT:
+                alert("The request to get user location timed out.");
+                break;
+            case error.UNKNOWN_ERROR:  
+                alert("An unknown error occurred.");
+                break;
+        }
+    }
+
+    window.onload = getLocation;
+
+    function setLocationAndSubmit(form) {
+      const lat = form.querySelector('[name="latitude"]').value;
+      const lon = form.querySelector('[name="longitude"]').value;
+      
+      if (! lat || !lon) {
+         if (navigator.geolocation) {
+             navigator.geolocation.getCurrentPosition(function(position) {
+                form.querySelector('[name="latitude"]').value = position.coords.latitude;
+                form.querySelector('[name="longitude"]').value = position.coords.longitude;
+                form.submit();
+             }, function(error) {
+                alert("Location not detected. Please enable location services and reload.");
+             });
+         } else {
+             alert("Geolocation is not supported by this browser.");
+         }
+         return false;
+      }
+
+      return true;
+    }
+
+  </script>
+</head>
+<body>
+  <div class="container">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
+    
+    <div class="sidebar" id="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+        </div>
+        <ul>
+            <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
+            <li class="active"><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
+            <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight:  bold;">Employee's</a></li>
+            {% if not is_hr %}
+            <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+            {% endif %}
+            {% if is_hr %}
+            <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
+            {% endif %}
+        </ul>
+        <div class="help-center">
+            <p>Help Centre</p></br>
+            <p>Terms & Conditions</p></br>
+            <p>Privacy & Policy</p>
+        </div>
+    </div>
+
+    <!-- Main Section -->
+    <div class="main-content">
+
+      <header style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Welcome {{ user.name }}</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div id="notif" style="position: relative; display: inline-block; cursor: pointer;">
+            <span id="notifBell">🔔</span>
+            {% if error or success %}
+            <span id="notifBadge" style="position: absolute; top:-6px; right:-6px; background:#e74c3c; color: white; border-radius:50%; padding:2px 6px; font-size:12px;">1</span>
+            {% endif %}
+            <div id="notifDropdown" style="display:none; position:absolute; right: 0; top:26px; background: white; border:1px solid #ddd; box-shadow:0 2px 6px rgba(0,0,0,0.15); width:320px; z-index:200;">
+              <div style="padding:  10px; font-weight:bold; border-bottom:1px solid #eee;">Notifications</div>
+              <div style="max-height:200px; overflow:  auto;">
+                {% if error %}
+                  <div style="padding: 10px; border-bottom:1px solid #f5f5f5; color:#c0392b;">⚠️ {{ error | replace('+',' ') }}</div>
+                {% endif %}
+                {% if success %}
+                  <div style="padding:10px; border-bottom:1px solid #f5f5f5; color:#2ecc71;">✅ {{ success | replace('+',' ') }}</div>
+                {% endif %}
+                {% if not (error or success) %}
+                  <div style="padding:10px; color:#666;">No notifications</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="card">
+        <!-- Left Side (Photo) -->
+        <div class="photo-section">
+          <strong>Photo</strong>
+          <img class="profile-photo" src="{{ url_for('static', path=user.photo) }}" alt="Photo">
+          <h2>{{ user.name }}</h2>
+          <br>
+          <br>
+          <div class="detail"><strong>Total Working Days </strong> {{ user.total_working }}</div>
+          <br>
+          <br>
+          <div class="detail"><strong>Total Leaves:  </strong> {{ user.total_leave }}</div>
+        </div>
+
+        <!-- Right Side (Details) -->
+        <div class="details-section">
+          <h3>Employee Details</h3>
+          <div class="details-grid">
+            <div class="detail"><strong>Joining Date :  </strong>{{ user.joining_date }}</div>
+            <div class="detail"><strong>Employee Number : </strong>{{ user.employee_number }}</div>
+            <div class="detail"><strong>Name : </strong>{{ user.name }}</div>
+            <div class="detail"><strong>Mobile Number : </strong>{{ user.phone }}</div>
+            <div class="detail"><strong>Parent Mobile Number : </strong>{{ user.parent_phone }}</div>
+            <div class="detail"><strong>Email : </strong>{{ user.email }}</div>
+            <div class="detail"><strong>Date of Birth : </strong>{{ user.dob }}</div>
+            <div class="detail"><strong>Gender : </strong>{{ user.gender }}</div>
+            <div class="detail"><strong>Job Role : </strong>{{ user.job_role }}</div>
+            <div class="detail"><strong>Native :  </strong>{{ user.native }}</div>
+            <div class="detail"><strong>Present Address : </strong>{{ user.address }}</div>
+            <div class="detail"><strong>Aadhar Number : </strong>{{ user.aadhar }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-container">
+        {% if not is_hr %}
+        <form method="POST" action="/attendance" onsubmit="return setLocationAndSubmit(this)">
+          <input type="hidden" name="action" value="check-in">
+          <input type="hidden" id="latitude_checkin" name="latitude">
+          <input type="hidden" id="longitude_checkin" name="longitude">
+        </form>
+        <form method="POST" action="/attendance" onsubmit="return setLocationAndSubmit(this)">
+          <input type="hidden" name="action" value="check-out">
+          <input type="hidden" id="latitude_checkout" name="latitude">
+          <input type="hidden" id="longitude_checkout" name="longitude">
+        </form>
+        {% else %}
+        <div style="text-align: center; color:  #7f8c8d; font-size: 14px; padding: 20px;">
+          <p>HR users can manage attendance through the <strong>Management</strong> tab</p>
+        </div>
+        {% endif %}
+      </div>     
+
+    </div>
+  </div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+    const sidebar = document.getElementById('sidebar');
+    const toggle = document.querySelector('.mobile-menu-toggle');
+    
+    if (window.innerWidth <= 768) {
+        if (!sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
+    }
+});
+
+// Close sidebar when window is resized to desktop
+window.addEventListener('resize', function() {
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth > 768) {
+        sidebar.classList.remove('open');
+    }
+});
+
+// Notification dropdown functionality
+document.addEventListener('click', function (e) {
+    const bell = document.getElementById('notifBell');
+    const dropdown = document.getElementById('notifDropdown');
+    if (!bell || !dropdown) return;
+    if (bell.contains(e.target) || (e.target.id === 'notifBadge')) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    } else if (!dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>

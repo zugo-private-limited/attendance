@@ -1,10 +1,13 @@
 import os
 from datetime import time
 
+from dotenv import load_dotenv
+load_dotenv()
+
 #Database Configuration (ensure these are set in your environment or .env file)
 DB_NAME = os.getenv("DB_NAME", "zugo_attendance")
 DB_USER = os.getenv("DB_USER", "zugoweb")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "Zugo@123")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 

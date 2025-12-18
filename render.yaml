@@ -1,0 +1,38 @@
+# Render Blueprint for easy deployment
+services:
+  - type: web
+    name: zugo-attendance
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"  # PostgreSQL default, change if using MySQL
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        fromService:
+          type: web
+          name: zugo-attendance
+          property: port
+      - key: DEBUG
+        value: "False"
+      - key: HR_EMAIL
+        value: "zugopvtnetwork@gmail.com"
+
+databases:
+  - name: zugo-attendance-db
+    databaseName: zugo_attendance
+    user: zugoweb
+    plan: free  # or starter for production
+

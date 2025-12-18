@@ -1,0 +1,216 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ "HR Dashboard" if is_hr else "Employee Directory" }} - Zugo</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='employee.css') }}" />
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
+        
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="logo">
+                <img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-width: 120px; height: auto; margin-bottom: 16px;">
+            </div>
+            <ul>
+                <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
+                <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
+                <li class="active"><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
+                <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+                {% if is_hr %}
+                <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
+                {% endif %}
+            </ul>
+
+            <div class="help-center">
+                <p>Help Centre</p></br>
+                <p>Terms & Conditions</p></br>
+                <p>Privacy & Policy</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="topbar">
+                <div class="search-box">
+                    <input type="text" id="search" placeholder="Search employees..." />
+                </div>
+                <div class="top-icons">
+                    <i>🔔</i>
+                    <a href="{{ url_for('dashboard_view') }}" style="text-decoration: none; color: inherit;"><i>👤</i></a>
+                </div>
+            </header>
+
+            <section class="employee-section">
+                <div class="employee-header">
+                    <h2>{{ "Employee Management" if is_hr else "Employee Directory" }}</h2>
+                    {% if is_hr %}
+                    <div class="buttons">
+                        <button class="btn-green" onclick="openAddEmployeeModal()">Add New Employee</button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Employee Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Phone</th>
+                                {% if is_hr %}
+                                <th>Parent Number</th>
+                                <th>Aadhar Number</th>
+                                <th>Joining Date</th>
+                                {% endif %}
+                                <th>Present Today</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in employees %}
+                            <tr>
+                                <td>{{ employee.employee_number or 'N/A' }}</td>
+                                <td>{{ employee.name }}</td>
+                                <td>{{ employee.email }}</td>
+                                <td>{{ employee. job_role or 'Employee' }}</td>
+                                <td>{{ employee.phone or 'N/A' }}</td>
+                                {% if is_hr %}
+                                <td>{{ employee.parent_phone }}</td>
+                                <td>{{ employee.aadhar }}</td>
+                                <td>{{ employee.joining_date }}</td>
+                                {% endif %}
+                                <td>
+                                    {% if employee.present_today %}
+                                    <span class="status-badge present">Present</span>
+                                    {% else %}
+                                    <span class="status-badge absent">Absent</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{{ 9 if is_hr else 6 }}">No employee records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {% if is_hr %}
+            <!-- Add/Edit Employee Modal -->
+            <div id="employeeModal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="modalTitle">Add New Employee</h3>
+                    <form id="employeeForm" method="POST" action="{{ url_for('manage_employee') }}">
+                        <input type="hidden" name="action" id="formAction" value="add">
+                        <input type="hidden" name="email" id="editEmail">
+                        
+                        <div class="form-group">
+                            <label for="name">Full Name *</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="new_email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password *</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Phone</label>
+                            <input type="tel" id="phone" name="phone">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="employee_number">Employee ID</label>
+                            <input type="text" id="employee_number" name="employee_number">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="role">Role</label>
+                            <input type="text" id="role" name="job_role" value="Employee">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob" name="dob">
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" onclick="closeModal()" class="btn btn-outline">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                }
+            }
+        });
+
+        // Close sidebar when window is resized to desktop
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        document.getElementById('search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        {% if is_hr %}
+        function openAddEmployeeModal() {
+            const modal = document.getElementById('employeeModal');
+            const form = document.getElementById('employeeForm');
+            const title = document.getElementById('modalTitle');
+            
+            title.textContent = 'Add New Employee';
+            form.reset();
+            document.getElementById('formAction').value = 'add';
+            document.getElementById('editEmail').value = '';
+            document.getElementById('email').disabled = false;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('employeeModal').classList.add('hidden');
+        }
+        {% endif %}
+    </script>
+</body>
+</html>

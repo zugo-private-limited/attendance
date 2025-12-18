@@ -18,8 +18,9 @@ from config import (
     ATTENDANCE_PERIOD_START_DAY, ATTENDANCE_PERIOD_END_DAY
 )
 from data import (
-    fetch_all_employees ,  update_employee_leave , fetch_attendance_for_period ,fetch_monthly_attendance_all , get_db_connection
+    fetch_all_employees, update_employee_leave, fetch_attendance_for_period, fetch_monthly_attendance_all
 )
+import mysql.connector
 
 # ===========================================================================
 # SERVICE FUNCTIONS (Business Logic)
@@ -191,7 +192,14 @@ def send_monthly_report_email_task() -> None:
         print(f"Failed to send monthly report email: {e}")
 
 def reset_monthly_totals():
-    conn = get_db_connection()
+    import config
+    conn = mysql.connector.connect(
+        host=config.DB_HOST,
+        port=config.DB_PORT,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+        database=config.DB_NAME
+    )
     try:
         cursor = conn.cursor()
         cursor.execute("UPDATE employee_details SET total_working = 0, total_leave = 0")
