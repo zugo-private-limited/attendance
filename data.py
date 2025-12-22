@@ -1,6 +1,6 @@
-
 from datetime import date
-import mysql.connector
+import psycopg2
+import psycopg2.extras
 from typing import Optional, List, Dict
 # --- Local Imports ---
 import config
@@ -15,7 +15,7 @@ from fastapi import HTTPException
 def get_db_connection():
     """Dependency to get a database connection."""
     try:
-        conn = mysql.connector.connect(
+        conn = psycopg2.connect(
             host=config.DB_HOST,
             port=config.DB_PORT,
             user=config.DB_USER,
@@ -23,10 +23,10 @@ def get_db_connection():
             database=config.DB_NAME
         )
         yield conn
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {err}")
     finally:
-        if 'conn' in locals() and conn.is_connected():
+        if 'conn' in locals() and conn:
             conn.close()
 
 
@@ -34,8 +34,8 @@ def get_db_connection():
 # DATABASE UTILITY FUNCTIONS
 # ===========================================================================
 
-def fetch_employee_by_email(db: mysql.connector.MySQLConnection, email: str) -> Optional[Dict]:
-    cursor = db.cursor(dictionary=True)
+def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT * FROM employee_details WHERE email = %s", (email,))
     employee = cursor.fetchone()
     cursor.close()
@@ -71,8 +71,8 @@ def fetch_employee_by_email(db: mysql.connector.MySQLConnection, email: str) -> 
     return employee
 
 
-def fetch_attendance_for_today(db: mysql.connector.MySQLConnection, user_email: str) -> List[Dict]:
-    cursor = db.cursor(dictionary=True)
+def fetch_attendance_for_today(db, user_email: str) -> List[Dict]:
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     today = date.today()
     cursor.execute(
         "SELECT * FROM attendance WHERE user_email = %s AND DATE(event_time) = %s",
@@ -83,8 +83,8 @@ def fetch_attendance_for_today(db: mysql.connector.MySQLConnection, user_email: 
     return records
     
 
-def fetch_all_employees(db: mysql.connector.MySQLConnection) -> List[Dict]:
-    cursor = db.cursor(dictionary=True)
+def fetch_all_employees(db) -> List[Dict]:
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT * FROM employee_details WHERE email != %s", (config.HR_EMAIL,))
     employees = cursor.fetchall()
     cursor.close()
@@ -140,9 +140,9 @@ def fetch_all_employees(db: mysql.connector.MySQLConnection) -> List[Dict]:
     return employees
 
 
-def fetch_notifications_for_user(db: mysql.connector.MySQLConnection, user_email: str) -> List[Dict]:
+def fetch_notifications_for_user(db, user_email: str) -> List[Dict]:
     """Fetch unread notifications for a user."""
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """SELECT id, recipient_email, message, task_id, type, is_read, created_at 
            FROM notifications 
@@ -155,7 +155,7 @@ def fetch_notifications_for_user(db: mysql.connector.MySQLConnection, user_email
     return notifications
 
 
-def mark_notification_as_read(db: mysql.connector.MySQLConnection, notification_id: int):
+def mark_notification_as_read(db, notification_id: int):
     """Mark a notification as read."""
     cursor = db.cursor()
     cursor.execute(
@@ -168,14 +168,14 @@ def mark_notification_as_read(db: mysql.connector.MySQLConnection, notification_
 
 def fetch_attendance_for_period(user_email: str, start_date: date, end_date: date) -> List[Dict]:
     """Fetch attendance records for a user within a date range."""
-    conn = mysql.connector.connect(
+    conn = psycopg2.connect(
         host=config.DB_HOST,
         port=config.DB_PORT,
         user=config.DB_USER,
         password=config.DB_PASSWORD,
         database=config.DB_NAME
     )
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """SELECT * FROM attendance 
            WHERE user_email = %s AND DATE(event_time) BETWEEN %s AND %s
@@ -190,7 +190,7 @@ def fetch_attendance_for_period(user_email: str, start_date: date, end_date: dat
 
 def update_employee_leave(user_email: str, new_leave_count: int):
     """Update the total leave count for an employee."""
-    conn = mysql.connector.connect(
+    conn = psycopg2.connect(
         host=config.DB_HOST,
         port=config.DB_PORT,
         user=config.DB_USER,
@@ -209,18 +209,18 @@ def update_employee_leave(user_email: str, new_leave_count: int):
 
 def fetch_monthly_attendance_all(year: int, month: int) -> List[Dict]:
     """Fetch all attendance records for a specific calendar month."""
-    conn = mysql.connector.connect(
+    conn = psycopg2.connect(
         host=config.DB_HOST,
         port=config.DB_PORT,
         user=config.DB_USER,
         password=config.DB_PASSWORD,
         database=config.DB_NAME
     )
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """SELECT user_email, action, event_time, latitude, longitude, location_text 
            FROM attendance 
-           WHERE YEAR(event_time) = %s AND MONTH(event_time) = %s
+           WHERE EXTRACT(YEAR FROM event_time) = %s AND EXTRACT(MONTH FROM event_time) = %s
            ORDER BY event_time""",
         (year, month)
     )

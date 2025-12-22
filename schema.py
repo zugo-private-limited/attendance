@@ -1,5 +1,5 @@
-
-import mysql.connector
+import psycopg2
+import psycopg2.extras
 import os
 import config
 from employees import users as static_users 
@@ -7,51 +7,98 @@ from employees import users as static_users
 def initialize_database_schema():
     """Initializes the database schema for Attendance Only."""
     try:
-        conn = mysql.connector.connect(
-            host=config.DB_HOST, user=config.DB_USER, password=config.DB_PASSWORD, port=config.DB_PORT
+        # Connect to postgres default database to create our database
+        conn = psycopg2.connect(
+            host=config.DB_HOST, 
+            user=config.DB_USER, 
+            password=config.DB_PASSWORD, 
+            port=config.DB_PORT,
+            database="postgres"
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+        
+        # Check if database exists
+        cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = '{config.DB_NAME}'")
+        db_exists = cursor.fetchone()
+        
+        if not db_exists:
+            cursor.execute(f"CREATE DATABASE {config.DB_NAME}")
+            print(f"Created database: {config.DB_NAME}")
+        else:
+            print(f"Database {config.DB_NAME} already exists")
+        
+        cursor.close()
+        conn.close()
+        
+        # Now connect to the created database
+        conn = psycopg2.connect(
+            host=config.DB_HOST, 
+            user=config.DB_USER, 
+            password=config.DB_PASSWORD, 
+            port=config.DB_PORT,
+            database=config.DB_NAME
         )
         cursor = conn.cursor()
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{config.DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        cursor.execute(f"USE `{config.DB_NAME}`")
         
-        # 1. Attendance Table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS attendance (
-                id BIGINT PRIMARY KEY AUTO_INCREMENT, 
-                user_email VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-                action ENUM('check-in','check-out') NOT NULL, 
-                event_time DATETIME NOT NULL,
-                latitude DECIMAL(10,7) NULL, 
-                longitude DECIMAL(10,7) NULL,
-                location_text VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL, 
-                INDEX idx_user_time (user_email, event_time)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        """)
+        # 1. Attendance Table - SEPARATE execute calls
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS attendance (
+                    id BIGSERIAL PRIMARY KEY,
+                    user_email VARCHAR(255) NOT NULL,
+                    action VARCHAR(50) NOT NULL,
+                    event_time TIMESTAMP NOT NULL,
+                    latitude NUMERIC(10,7) NULL,
+                    longitude NUMERIC(10,7) NULL,
+                    location_text VARCHAR(255) NULL
+                )
+            """)
+            print("Created/verified attendance table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating attendance table: {e}")
+        
+        # Create index separately
+        try:
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_time 
+                ON attendance (user_email, event_time)
+            """)
+            print("Created/verified attendance index")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating index: {e}")
 
-        # 2. Employee Details Table (Removed Salary/Bank/Task fields)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS employee_details (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-                email VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci UNIQUE NOT NULL,
-                password VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, 
-                photo VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'profile.jpg',
-                job_role VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'Employee',
-                phone VARCHAR(20),
-                parent_phone VARCHAR(20),
-                dob VARCHAR(50),
-                gender VARCHAR(50),
-                employee_number VARCHAR(50) UNIQUE,
-                aadhar VARCHAR(50),
-                joining_date VARCHAR(50),
-                native VARCHAR(255),
-                address TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-                total_leave INT DEFAULT 0,
-                total_working INT DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        """)
+        # 2. Employee Details Table
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS employee_details (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    photo VARCHAR(255) DEFAULT 'profile.jpg',
+                    job_role VARCHAR(255) DEFAULT 'Employee',
+                    phone VARCHAR(20),
+                    parent_phone VARCHAR(20),
+                    dob VARCHAR(50),
+                    gender VARCHAR(50),
+                    employee_number VARCHAR(50) UNIQUE,
+                    aadhar VARCHAR(50),
+                    joining_date VARCHAR(50),
+                    native VARCHAR(255),
+                    address TEXT,
+                    total_leave INT DEFAULT 0,
+                    total_working INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            print("Created/verified employee_details table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating employee_details table: {e}")
 
         conn.commit()
 
@@ -68,6 +115,8 @@ def initialize_database_schema():
                 )
                 conn.commit()
                 print(f"Inserted default HR account: {config.HR_EMAIL}")
+            else:
+                print(f"HR account already exists: {config.HR_EMAIL}")
             cursor2.close()
         except Exception as _e:
             print(f"Warning: could not ensure HR account exists: {_e}")
@@ -76,10 +125,12 @@ def initialize_database_schema():
         try:
             cursor3 = conn.cursor()
             for email, user_data in static_users.items():
-                if email == config.HR_EMAIL: continue
+                if email == config.HR_EMAIL: 
+                    continue
                     
                 cursor3.execute("SELECT email FROM employee_details WHERE email = %s", (email,))
-                if cursor3.fetchone(): continue 
+                if cursor3.fetchone(): 
+                    continue 
                 
                 # Extract data (Safe dict.get)
                 name = user_data.get("name", "")
@@ -113,5 +164,6 @@ def initialize_database_schema():
         cursor.close()
         conn.close()
         print("Database schema initialization complete.")
-    except mysql.connector.Error as err:
+        
+    except psycopg2.Error as err:
         print(f"Error during DB initialization: {err}")

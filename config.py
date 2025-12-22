@@ -1,15 +1,20 @@
 import os
 from datetime import time
-
+import psycopg2
 from dotenv import load_dotenv
-load_dotenv()
 
-#Database Configuration (ensure these are set in your environment or .env file)
-DB_NAME = os.getenv("DB_NAME", "zugo_attendance")
-DB_USER = os.getenv("DB_USER", "zugoweb")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+# Load .env file only in local development (not on Render)
+if not os.getenv("RENDER"):
+    load_dotenv()
+
+# Database Configuration
+# On Render: Use environment variables set in dashboard
+# Locally: Use .env file values
+DB_NAME = os.getenv("DB_NAME", "attendance_db")
+DB_USER = os.getenv("DB_USER", "zugo_attendance")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "Zugo@123")
 DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = int(os.getenv("DB_PORT", "3306"))
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
 
 # Office Location for Attendance
@@ -28,8 +33,9 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "zugopvtnetwork@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-HR_EMAIL = os.getenv("HR_EMAIL", "zugopvtnetwork@gmail.com")
-MD_EMAIL = os.getenv("MD_EMAIL", "zugoprivitelimited.com")
+
+HR_EMAIL = os.getenv("HR_EMAIL", "zugopvtnetwork@gmail.com")  # HR account
+MD_EMAIL = os.getenv("MD_EMAIL", "zugoprivitelimited@gmail.com")
 
 
 # --- LOCATION CONFIGURATION ---

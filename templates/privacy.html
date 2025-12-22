@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Zugo</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='report.css') }}">
+    <style>
+        .legal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+            color: #333;
+        }
+        .legal-content h1 { color: #221f1eff; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .legal-content h2 { color: #2c3e50; margin-top: 30px; font-size: 1.2rem; }
+        .legal-content ul { margin-bottom: 15px; padding-left: 20px; }
+        .legal-content li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+        </div>
+        <ul>
+            <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
+            <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
+            <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
+            <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+            {% if is_hr %}
+            <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
+            {% endif %}
+        </ul>
+        <div class="help-center">
+            <a href="#" style="text-decoration:none; color:inherit;"><p>Help Centre</p></a><br>
+            <a href="{{ url_for('terms') }}" style="text-decoration:none; color:inherit;"><p>Terms & Conditions</p></a><br>
+            <a href="{{ url_for('privacy') }}" style="text-decoration:none; color:#e74c3c; font-weight:bold;"><p>Privacy & Policy</p></a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header style="padding: 20px;">
+        </header>
+
+        <div class="legal-content">
+            <h1>Privacy Policy</h1>
+
+            <h2>1. Introduction</h2>
+            <p>The Company is committed to protecting the privacy and personal information of its employees, clients, and partners. This Privacy Policy explains how data is collected, used, and protected.</p>
+
+            <h2>2. Information We Collect</h2>
+            <ul>
+                <li>Employee personal details (name, address, contact details, ID proofs)</li>
+                <li>Client information for project execution</li>
+                <li>System usage data for security and performance monitoring</li>
+            </ul>
+
+            <h2>3. Use of Information</h2>
+            <ul>
+                <li>For HR management and payroll processing</li>
+                <li>For project execution and client communication</li>
+                <li>For internal audits, security, and compliance</li>
+            </ul>
+
+            <h2>4. Data Protection</h2>
+            <ul>
+                <li>All data is stored securely with restricted access.</li>
+                <li>Employees are responsible for protecting login credentials and company data.</li>
+            </ul>
+
+            <h2>5. Data Sharing</h2>
+            <ul>
+                <li>Personal or company data will not be shared with third parties without authorization, except where required by law.</li>
+            </ul>
+
+            <h2>6. Employee Responsibility</h2>
+            <ul>
+                <li>Employees must handle all data ethically and lawfully.</li>
+                <li>Any data breach or suspected security issue must be reported immediately to management.</li>
+            </ul>
+
+            <h2>7. Legal Compliance</h2>
+            <ul>
+                <li>The Company follows applicable data protection and IT regulations under Indian law.</li>
+            </ul>
+
+            <h2>8. Policy Changes</h2>
+            <ul>
+                <li>This Privacy Policy may be updated periodically.</li>
+            </ul>
+
+            <h2>9. Contact</h2>
+            <p>For any questions regarding these policies, employees may contact <strong>HR or the Managing Director (MD)</strong>.</p>
+            
+            <hr style="margin-top:40px; border-top: 1px solid #eee;">
+            <p style="margin-top:20px; font-size:0.9rem; color:#666;">
+                <strong>By continuing employment with the Company, employees acknowledge that they have read, understood, and agreed to the Terms & Conditions and this Privacy Policy.</strong>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

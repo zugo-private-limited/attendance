@@ -3,6 +3,8 @@ import math
 import io
 import csv
 import config
+import psycopg2
+import psycopg2.extras
 from math import radians, cos, sin, asin, sqrt
 from typing import Optional, List, Dict
 
@@ -20,7 +22,7 @@ from config import (
 from data import (
     fetch_all_employees, update_employee_leave, fetch_attendance_for_period, fetch_monthly_attendance_all
 )
-import mysql.connector
+import psycopg2
 
 # ===========================================================================
 # SERVICE FUNCTIONS (Business Logic)
@@ -193,7 +195,7 @@ def send_monthly_report_email_task() -> None:
 
 def reset_monthly_totals():
     import config
-    conn = mysql.connector.connect(
+    conn = psycopg2.connect(
         host=config.DB_HOST,
         port=config.DB_PORT,
         user=config.DB_USER,

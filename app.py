@@ -2,7 +2,8 @@ import os
 import uvicorn
 import csv
 import io
-import mysql.connector  
+import psycopg2
+import psycopg2.extras
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 
@@ -30,21 +31,17 @@ async def lifespan(app: FastAPI):
     yield
     print("Application shutdown...")
 
-app = FastAPI(title="Zugo Attendance Management System", lifespan=lifespan)
-import os
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY", "change_me_in_production_use_strong_random_key"))
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
-
 # Set absolute paths for Render compatibility
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-app = FastAPI()
+app = FastAPI(title="Zugo Attendance Management System", lifespan=lifespan)
 
-# Mount static files (do not change this path on Render)
+# Add SessionMiddleware before mounting static files
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET_KEY", "change_me_in_production_use_strong_random_key"))
+
+# Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Jinja2 Templates setup
@@ -62,7 +59,7 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/", response_class=RedirectResponse)
-async def handle_login(request: Request, email: str = Form(...), password: str = Form(...), db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def handle_login(request: Request, email: str = Form(...), password: str = Form(...), db = Depends(get_db_connection)):
     """Processes login form submission, authenticates user, and sets session."""
     employee = fetch_employee_by_email(db, email)
     if employee and employee["password"] == password:
@@ -79,7 +76,7 @@ async def signup(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    db: mysql.connector. MySQLConnection = Depends(get_db_connection)
+    db = Depends(get_db_connection)
 ):
     """Registers a new employee."""
     if fetch_employee_by_email(db, email):
@@ -120,7 +117,7 @@ async def signup(
     return RedirectResponse(url="/report", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.get("/report", response_class=HTMLResponse, summary="Display employee attendance")
-async def report(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def report(request: Request, db = Depends(get_db_connection)):
     """Shows the main dashboard for a logged-in employee."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -154,7 +151,7 @@ async def report(request: Request, db: mysql.connector.MySQLConnection = Depends
     })
 
 @app.get("/download_report", summary="Download attendance report as CSV")
-async def download_report(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def download_report(request: Request, db = Depends(get_db_connection)):
     """Return a CSV file of the user's attendance report (last 30 days)."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -177,7 +174,7 @@ async def download_report(request: Request, db: mysql.connector.MySQLConnection 
     })
 
 @app.get("/dashboard", response_class=HTMLResponse, name="dashboard_view", summary="Display employee dashboard (profile view)")
-async def dashboard_view(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def dashboard_view(request: Request, db = Depends(get_db_connection)):
     """Render dashboard.html showing the employee's full profile."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -204,7 +201,7 @@ async def handle_attendance(
     action: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
-    db: mysql.connector.MySQLConnection = Depends(get_db_connection)
+    db = Depends(get_db_connection)
 ):
     """Processes check-in and check-out requests."""
     user_email = request.session.get("user_email")
@@ -227,7 +224,7 @@ async def handle_attendance(
     current_time = now.time()
     today = now.date()
     
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """
         SELECT * FROM attendance 
@@ -309,7 +306,7 @@ async def handle_attendance(
         )
 
 @app.get("/employees", response_class=HTMLResponse, name="employees_page", summary="Display employees list")
-async def employees_page(request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def employees_page(request: Request, db = Depends(get_db_connection)):
     """Display list of all employees."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -349,7 +346,7 @@ async def employees_page(request: Request, db: mysql.connector.MySQLConnection =
     })
 
 @app.get("/hr-management", response_class=HTMLResponse, name="hr_management", summary="HR Management Dashboard")
-async def hr_management(request: Request, db:  mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def hr_management(request: Request, db = Depends(get_db_connection)):
     """HR-only page showing all employees with details."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -358,7 +355,7 @@ async def hr_management(request: Request, db:  mysql.connector.MySQLConnection =
     if user_email != config.HR_EMAIL:
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         "SELECT * FROM employee_details WHERE email != %s ORDER BY name ASC",      
         (config.HR_EMAIL,)
@@ -388,7 +385,7 @@ async def hr_management(request: Request, db:  mysql.connector.MySQLConnection =
     })
 
 @app.get("/api/employee/{email}", summary="Get employee details by email")
-async def get_employee_api(email: str, request: Request, db: mysql.connector.MySQLConnection = Depends(get_db_connection)):
+async def get_employee_api(email: str, request: Request, db = Depends(get_db_connection)):
     """API endpoint to fetch employee details for editing."""
     user_email = request.session.get("user_email")
     if not user_email or user_email != config.HR_EMAIL:
@@ -413,7 +410,7 @@ async def manage_employee(
     dob: str = Form(default=""),
     salary: str = Form(default=""),
     email:  str = Form(default=""),
-    db: mysql.connector.MySQLConnection = Depends(get_db_connection)
+    db = Depends(get_db_connection)
 ):
     """Handle adding or editing employees (HR only)."""
     user_email = request.session.get("user_email")
@@ -421,9 +418,21 @@ async def manage_employee(
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
-        cursor = db.cursor()
+        cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
-        if action == "add":  
+        if action == "add":
+            # Check for duplicate email
+            cursor.execute("SELECT email FROM employee_details WHERE email = %s", (new_email,))
+            if cursor.fetchone():
+                cursor.close()
+                return RedirectResponse(url="/hr-management?error=Email already exists", status_code=status.HTTP_303_SEE_OTHER)
+            
+            # Check for duplicate name
+            cursor.execute("SELECT name FROM employee_details WHERE LOWER(name) = LOWER(%s)", (name,))
+            if cursor.fetchone():
+                cursor.close()
+                return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)
+            
             cursor.execute(
                 """INSERT INTO employee_details 
                    (name, email, password, phone, employee_number, job_role, dob)
@@ -433,35 +442,48 @@ async def manage_employee(
             db.commit()
             
         elif action == "edit":
+            # Check if email is being changed and if new email already exists (excluding current employee)
+            if new_email != email:
+                cursor.execute("SELECT email FROM employee_details WHERE email = %s AND email != %s", (new_email, email))
+                if cursor.fetchone():
+                    cursor.close()
+                    return RedirectResponse(url="/hr-management?error=Email already exists", status_code=status.HTTP_303_SEE_OTHER)
+            
+            # Check if name is being changed and if new name already exists (excluding current employee)
+            cursor.execute("SELECT name FROM employee_details WHERE LOWER(name) = LOWER(%s) AND email != %s", (name, email))
+            if cursor.fetchone():
+                cursor.close()
+                return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)
+            
             if password:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s, password = %s
+                       SET name = %s, email = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s, password = %s
                        WHERE email = %s""",
-                    (name, phone, employee_number, job_role, dob, password, email)
+                    (name, new_email, phone, employee_number, job_role, dob, password, email)
                 )
             else:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s
+                       SET name = %s, email = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s
                        WHERE email = %s""",
-                    (name, phone, employee_number, job_role, dob, email)
+                    (name, new_email, phone, employee_number, job_role, dob, email)
                 )
             db.commit()
         
         cursor.close()
         
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"Database error: {err}")
-        return RedirectResponse(url="/hr-management? error=Database error", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/hr-management?error=Database error", status_code=status.HTTP_303_SEE_OTHER)
     
-    return RedirectResponse(url="/hr-management? success=Employee saved", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/hr-management?success=Employee saved", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/delete-employee", response_class=RedirectResponse, summary="Delete employee")
 async def delete_employee(
     request: Request,
     email: str = Form(...),
-    db: mysql.connector. MySQLConnection = Depends(get_db_connection)
+    db = Depends(get_db_connection)
 ):
     """Delete an employee (HR only)."""
     user_email = request.session.get("user_email")
@@ -477,7 +499,7 @@ async def delete_employee(
         db.commit()
         cursor.close()
         
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"Database error: {err}")
         return RedirectResponse(url="/hr-management?error=Database error", status_code=status.HTTP_303_SEE_OTHER)
     
@@ -490,7 +512,7 @@ async def manual_attendance(
     attendance_date: str = Form(...),
     attendance_time: str = Form(...),
     action: str = Form(...),
-    db: mysql.connector.MySQLConnection = Depends(get_db_connection)
+    db = Depends(get_db_connection)
 ):
     """Allow HR to manually add attendance records for employees."""
     user_email = request.session.get("user_email")
@@ -537,7 +559,7 @@ async def manual_attendance(
             status_code=status.HTTP_303_SEE_OTHER
         )
         
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"Database error in manual_attendance: {err}")
         return RedirectResponse(
             url="/hr-management?error=Database error occurred:  " + str(err),
@@ -555,6 +577,32 @@ async def logout(request: Request):
     """Clears the user session."""
     request.session.clear()
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.get("/terms", response_class=HTMLResponse, name="terms")
+async def terms(request: Request):
+    """Terms and Conditions page."""
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    is_hr = user_email == config.HR_EMAIL
+    
+    return templates.TemplateResponse("terms.html", {
+        "request": request,
+        "is_hr": is_hr
+    })
+
+@app.get("/privacy", response_class=HTMLResponse, name="privacy")
+async def privacy(request: Request):
+    """Privacy Policy page."""
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    is_hr = user_email == config.HR_EMAIL
+    
+    return templates.TemplateResponse("privacy.html", {
+        "request": request,
+        "is_hr": is_hr
+    })
 
 # ===========================================================================
 # HELPER FUNCTIONS
@@ -588,7 +636,7 @@ def _build_report_for_user(db, user_email, days:  int = 30):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
 
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """
         SELECT event_time, action FROM attendance
@@ -637,11 +685,16 @@ def _build_report_for_user(db, user_email, days:  int = 30):
 # ===========================================================================
 
 if __name__ == "__main__":  
-    # For local development
-    if os.getenv("DEBUG", "False").lower() == "true":
-        uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
-    else:
-        # For cloud deployment
+    # Detect environment
+    is_render = os.getenv("RENDER")
+    
+    if is_render:
+        # Production on Render
         port = int(os.getenv("PORT", "8000"))
-        host = os.getenv("HOST", "127.0.0.1")
-        uvicorn.run("app:app", host=host, port=port) 
+        uvicorn.run("app:app", host="0.0.0.0", port=port)
+    else:
+        # Local development
+        if os.getenv("DEBUG", "False").lower() == "true":
+            uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+        else:
+            uvicorn.run("app:app", host="127.0.0.1", port=8000)

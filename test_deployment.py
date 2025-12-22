@@ -20,7 +20,7 @@ def test_imports():
     try:
         import fastapi
         import uvicorn
-        import mysql.connector
+        import psycopg2
         import jinja2
         print("[OK] All imports successful")
         return True
@@ -47,9 +47,9 @@ def test_database_connection():
     print("\nTesting database connection...")
     try:
         import config
-        import mysql.connector
+        import psycopg2
         
-        conn = mysql.connector.connect(
+        conn = psycopg2.connect(
             host=config.DB_HOST,
             port=config.DB_PORT,
             user=config.DB_USER,
@@ -59,9 +59,9 @@ def test_database_connection():
         conn.close()
         print("[OK] Database connection successful")
         return True
-    except mysql.connector.Error as e:
+    except psycopg2.Error as e:
         print(f"[FAIL] Database connection failed: {e}")
-        print("  Make sure MySQL is running and credentials are correct in .env")
+        print("  Make sure PostgreSQL is running and credentials are correct in .env")
         return False
     except Exception as e:
         print(f"[FAIL] Unexpected error: {e}")

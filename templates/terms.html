@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions - Zugo</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='report.css') }}">
+    <style>
+        .legal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+            color: #333;
+        }
+        .legal-content h1 { color: #221f1eff; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .legal-content h2 { color: #2c3e50; margin-top: 30px; font-size: 1.2rem; }
+        .legal-content ul { margin-bottom: 15px; padding-left: 20px; }
+        .legal-content li { margin-bottom: 8px; }
+        .legal-content strong { color: #000; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-width: 120px; height: auto; margin-bottom: 20px;">
+        </div>
+        <ul>
+            <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
+            <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
+            <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
+            <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+            {% if is_hr %}
+            <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
+            {% endif %}
+        </ul>
+        <div class="help-center">
+            <a href="#" style="text-decoration:none; color:inherit;"><p>Help Centre</p></a><br>
+            <a href="{{ url_for('terms') }}" style="text-decoration:none; color:#e74c3c; font-weight:bold;"><p>Terms & Conditions</p></a><br>
+            <a href="{{ url_for('privacy') }}" style="text-decoration:none; color:inherit;"><p>Privacy & Policy</p></a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header style="padding: 20px;">
+        </header>
+
+        <div class="legal-content">
+            <h1>Terms & Conditions</h1>
+
+            <h2>1. Company Overview</h2>
+            <p>These Terms & Conditions apply to all employees, interns, consultants, and contractors of the IT Solutions and Digital Marketing Company ("Company"). By joining or continuing employment with the Company, you agree to comply with these rules, policies, and procedures.</p>
+
+            <h2>2. Office Working Hours</h2>
+            <ul>
+                <li><strong>Office Timing:</strong> 9:30 AM to 7:30 PM</li>
+                <li>Employees must adhere strictly to working hours.</li>
+                <li>Late arrivals and early departures require prior approval from the Reporting Manager or HR.</li>
+            </ul>
+
+            <h2>3. Lunch Break</h2>
+            <ul>
+                <li><strong>Lunch Time:</strong> 1:30 PM to 2:15 PM</li>
+                <li>Employees must return to work on time after the lunch break.</li>
+            </ul>
+
+            <h2>4. Leave Policy</h2>
+            <ul>
+                <li>Any planned leave must be applied <strong>at least 7 days in advance</strong>.</li>
+                <li>Leave requests must be sent via <strong>email to HR and MD</strong>.</li>
+                <li>Emergency leave should be informed immediately through email or phone.</li>
+                <li>Leave approval is subject to management discretion and business requirements.</li>
+            </ul>
+
+            <h2>5. Dress Code</h2>
+            <ul>
+                <li>Employees must follow a <strong>formal or smart casual dress code</strong>.</li>
+                <li>Clean, professional, and decent attire is mandatory during office hours and official meetings.</li>
+                <li>Casual, inappropriate, or unprofessional clothing is strictly prohibited.</li>
+            </ul>
+
+            <h2>6. Notice Period & Resignation Policy</h2>
+            <ul>
+                <li>The <strong>mandatory notice period is 45 days</strong>.</li>
+                <li>On the day of resignation submission, the <strong>45-day notice period starts immediately</strong>.</li>
+                <li>Serving the full notice period is compulsory unless waived by management in writing.</li>
+                <li>Failure to complete the notice period may result in salary deductions and/or experience letter denial.</li>
+            </ul>
+
+            <h2>7. ID Card & Office Access</h2>
+            <ul>
+                <li>Wearing the <strong>Office ID Card is mandatory</strong> during working hours.</li>
+                <li>Entry to office premises without a valid ID card is not permitted.</li>
+                <li>Loss of ID card must be reported immediately to HR.</li>
+            </ul>
+
+            <h2>8. Workplace Conduct</h2>
+            <ul>
+                <li>Unwanted, unnecessary, or personal conversations during working hours are <strong>strictly prohibited</strong>.</li>
+                <li>Employees must maintain a professional, respectful, and disciplined work environment.</li>
+                <li>Use of abusive language, misconduct, harassment, or disrespectful behavior will lead to disciplinary action.</li>
+            </ul>
+
+            <h2>9. Personal Expenses & Cost Approvals</h2>
+            <ul>
+                <li>Any <strong>personal or work-related cost</strong> must be communicated via <strong>email to the Managing Director (MD)</strong>.</li>
+                <li>No employee is allowed to incur expenses without prior written approval.</li>
+                <li>Direct communication with MD is required only after official email submission.</li>
+            </ul>
+
+            <h2>10. Office Property, Assets & Damage Responsibility</h2>
+            <ul>
+                <li>All office property including laptops, desktops, furniture, networking devices, ID cards, access cards, software licenses, and other assets must be handled with care.</li>
+                <li>If any <strong>damage, loss, or misuse</strong> of office property occurs <strong>due to employee negligence, carelessness, or intentional action</strong>, the <strong>cost of repair or replacement will be recovered directly from the concerned employee’s salary or account</strong>.</li>
+                <li>In case of severe damage or repeated negligence, the Company reserves the right to take <strong>disciplinary or legal action</strong>.</li>
+                <li>Employees are responsible for safeguarding company assets assigned to them until proper handover.</li>
+            </ul>
+
+            <h2>11. IT Usage & Data Security</h2>
+            <ul>
+                <li>Company systems, email IDs, software, and internet access are strictly for official use.</li>
+                <li>Unauthorized access, data theft, data sharing, or misuse of company resources is prohibited.</li>
+                <li>Employees must not install unauthorized software or tools on company systems.</li>
+            </ul>
+
+            <h2>12. Confidentiality & Non-Disclosure</h2>
+            <ul>
+                <li>Employees must maintain strict confidentiality of company data, client information, strategies, and intellectual property.</li>
+                <li>Sharing company information with former employees, third parties, or competitors is strictly prohibited.</li>
+                <li>Confidentiality obligations continue even after resignation or termination.</li>
+            </ul>
+
+            <h2>13. Compliance with IT & Cyber Laws</h2>
+            <ul>
+                <li>Employees must comply with all applicable <strong>Indian IT Laws</strong>, including:
+                    <ul>
+                        <li>Information Technology Act, 2000</li>
+                        <li>Cyber Security and Data Protection Regulations</li>
+                        <li>Intellectual Property Laws</li>
+                    </ul>
+                </li>
+                <li>Any violation of IT laws, data misuse, hacking, or cyber misconduct will result in legal and disciplinary action.</li>
+            </ul>
+
+            <h2>14. Social Media & Digital Conduct</h2>
+            <ul>
+                <li>Employees must not post confidential company or client-related information on social media.</li>
+                <li>Any official communication or promotion must be approved by management.</li>
+            </ul>
+
+            <h2>15. Disciplinary Actions</h2>
+            <ul>
+                <li>Violation of company policies may lead to:
+                    <ul>
+                        <li>Warning</li>
+                        <li>Salary deduction</li>
+                        <li>Suspension</li>
+                        <li>Termination</li>
+                        <li>Legal action, if applicable</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h2>16. Policy Updates</h2>
+            <ul>
+                <li>The Company reserves the right to modify or update these Terms & Conditions at any time.</li>
+                <li>Employees will be notified of any changes officially.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>
