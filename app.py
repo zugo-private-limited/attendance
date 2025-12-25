@@ -98,6 +98,9 @@ async def signup(
         native = user_data.get("native")
         address = user_data.get("address")
         job_role = user_data.get("job_role", "Employee")
+        pan_card = user_data.get("pan_card")
+        salary = user_data.get("salary")
+        bank_details = user_data.get("bank_details")
     else:
         photo = "profile.jpg"
         phone = parent_phone = dob = gender = employee_number = aadhar = joining_date = native = address = None
@@ -107,8 +110,8 @@ async def signup(
     cursor.execute(
         """INSERT INTO employee_details 
            (name, email, password, photo, phone, parent_phone, dob, gender, 
-            employee_number, aadhar, joining_date, native, address, job_role)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            employee_number, aadhar, joining_date, native, address, job_role,pan_card, salary, bank_details)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (name, email, password, photo, phone, parent_phone, dob, gender,
          employee_number, aadhar, joining_date, native, address, job_role)
     )
@@ -440,7 +443,7 @@ async def manage_employee(
                 """INSERT INTO employee_details 
                    (name, email, password, phone, employee_number, job_role, dob)
                    VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (name, new_email, password or "zugo@123", phone, employee_number, job_role, dob)
+                (name, new_email, password , phone, employee_number, job_role, dob)
             )
             db.commit()
             
@@ -632,6 +635,9 @@ def _build_user_from_static(email):
         "parent_phone": u.get("parent_phone"),
         "total_working":  u.get("total_working", 0),
         "total_leave": u.get("total_leave", 0),
+        "pan_card": u.get("pan_card"),
+        "salary": u.get("salary"),
+        "bank_details": u.get("bank_details")
     }
 
 def _build_report_for_user(db, user_email, days:  int = 30):

@@ -1,0 +1,157 @@
+/* Mobile-First Responsive Enhancements */
+
+/* Touch-friendly button sizing for all devices */
+button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Input fields for better mobile typing */
+input, select, textarea {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 4px;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="text"] {
+    padding: 12px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+select {
+    padding: 12px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+    padding-right: 36px;
+}
+
+/* Prevent zooming on focus for iOS */
+input:focus,
+select:focus,
+textarea:focus {
+    font-size: 16px;
+}
+
+/* Improve link tap areas on mobile */
+a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+}
+
+/* Mobile-specific table improvements */
+@media (max-width: 768px) {
+    table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    th, td {
+        padding: 12px 8px;
+        word-break: break-word;
+    }
+    
+    th {
+        background: #f0f0f0;
+        font-weight: 600;
+        font-size: 12px;
+    }
+}
+
+/* Ensure sidebar closes properly on mobile */
+@media (max-width: 768px) {
+    .sidebar.open {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 1000;
+    }
+    
+    .sidebar {
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Fix for input focus zoom on iOS */
+@media (max-width: 480px) {
+    input, select, textarea {
+        font-size: 16px;
+    }
+}
+
+/* Improve modal usability on mobile */
+@media (max-width: 768px) {
+    .modal {
+        align-items: flex-end;
+        padding: 0;
+    }
+    
+    .modal-content {
+        border-radius: 16px 16px 0 0;
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Better spacing for touch targets */
+@media (max-width: 480px) {
+    .modal-actions button {
+        padding: 12px 15px;
+        min-height: 48px;
+        width: 100%;
+    }
+}
+
+/* Prevent accidental text selection on buttons */
+button, .btn, a.btn {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+
+/* Improve landscape mode usability */
+@media (max-height: 500px) {
+    .main-content {
+        padding-top: 50px;
+    }
+    
+    .sidebar {
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+}
+
+/* Ensure proper spacing on notches/safe area */
+@supports (padding: max(0px)) {
+    body {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    
+    .main-content {
+        padding-left: max(15px, env(safe-area-inset-left));
+        padding-right: max(15px, env(safe-area-inset-right));
+    }
+}

@@ -212,8 +212,10 @@ header {
     cursor: pointer;
     border-radius: 5px;
     min-width: 140px;
+    min-height: 44px;
     font-size: 15px;
     transition: transform 0.1s ease;
+    touch-action: manipulation;
 }
 
 .checkin-btn:active, .checkout-btn:active {
@@ -230,12 +232,21 @@ header {
     margin-bottom: 20px;
 }
 
+.search-box input {
+    font-size: 16px;
+    padding: 10px;
+    width: 100%;
+}
+
 .report-buttons button {
     padding: 10px 15px;
     margin-right: 10px;
     border: 1px solid #ccc;
     background: white;
     cursor: pointer;
+    min-height: 44px;
+    font-size: 14px;
+    border-radius: 5px;
 }
 
 table {
@@ -332,26 +343,102 @@ th, td {
         width: 100%;
         max-width: 280px;
     }
+
+    header {
+        flex-direction: column;
+        gap: 10px;
+    }
     
     .profile-card {
         padding: 10px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-left {
+        flex-basis: auto;
     }
     
     .profile-left .profile-pic {
         width: 80px;
         height: 80px;
     }
+
+    .profile-right {
+        width: 100%;
+    }
+
+    .profile-right .profile-details p {
+        font-size: 13px;
+        margin: 4px 0;
+    }
     
+    .btn-row {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
     .checkin-btn, .checkout-btn {
-        padding: 10px 15px;
+        padding: 12px 15px;
         font-size: 14px;
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .tabs {
+        gap: 10px;
+    }
+
+    .tab-btn {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+
+    .search-box {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+    }
+
+    .search-box input {
+        font-size: 16px;
+        padding: 10px;
+        min-height: 44px;
+    }
+
+    .report-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .report-buttons button {
+        width: 100%;
+        padding: 12px 15px;
+        font-size: 14px;
+        min-height: 44px;
+        margin-right: 0;
     }
     
     table {
         font-size: 12px;
+        min-width: 500px;
     }
     
     th, td {
-        padding: 6px 3px;
+        padding: 8px 4px;
+    }
+
+    th {
+        font-size: 11px;
+    }
+
+    .profile-card img {
+        width: 70px;
+        height: 70px;
+        margin-bottom: 8px;
     }
 }

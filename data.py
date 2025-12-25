@@ -67,6 +67,12 @@ def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
                 employee["photo"] = static_user.get("photo", "profile.jpg")
             if not employee.get("job_role"):
                 employee["job_role"] = static_user.get("job_role", "Employee")
+            if not employee.get("pan_card"):
+                employee["pan_card"] = static_user.get("pan_card")
+            if not employee.get("salary"):
+                employee["salary"] = static_user.get("salary")
+            if not employee.get("bank_details"):
+                employee["bank_details"] = static_user.get("bank_details")
     
     return employee
 
@@ -136,6 +142,12 @@ def fetch_all_employees(db) -> List[Dict]:
                     emp["photo"] = static_user.get("photo", "profile.jpg")
                 if not emp.get("job_role"):
                     emp["job_role"] = static_user.get("job_role", "Employee")
+                if not emp.get("pan_card"):
+                    emp["pan_card"] = static_user.get("pan_card")
+                if not emp.get("salary"):
+                    emp["salary"] = static_user.get("salary")
+                if not emp.get("bank_details"):
+                    emp["bank_details"] = static_user.get("bank_details")
 
     return employees
 

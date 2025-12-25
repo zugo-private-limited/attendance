@@ -281,6 +281,7 @@ header {
     
     .sidebar {
         transform: translateX(-100%);
+        max-width: 280px;
     }
     
     .sidebar.open {
@@ -302,10 +303,13 @@ header {
     
     .profile-card {
         margin-top: 10px;
+        flex-direction: column;
     }
     
     .photo-section {
         padding: 20px;
+        border-right: none;
+        border-bottom: 1px solid #EDF2F7;
     }
     
     .profile-photo {
@@ -315,6 +319,23 @@ header {
     
     .details-section {
         padding: 20px;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .button-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .button-container button {
+        width: 100%;
+        padding: 12px 20px;
+        min-height: 44px;
+        font-size: 16px;
     }
 }
 
@@ -337,11 +358,36 @@ header {
         height: 100px;
     }
     
+    .photo-section h2 {
+        font-size: 18px;
+    }
+    
     .details-section {
         padding: 15px;
     }
     
     .details-grid {
         gap: 15px;
+    }
+    
+    .detail-item {
+        padding: 12px;
+    }
+    
+    .detail-item strong {
+        font-size: 13px;
+    }
+    
+    .detail-item span {
+        font-size: 13px;
+    }
+    
+    .welcome-title {
+        font-size: 18px;
+    }
+    
+    .button-container button {
+        font-size: 14px;
+        padding: 10px 15px;
     }
 }

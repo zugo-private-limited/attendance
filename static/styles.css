@@ -11,8 +11,9 @@ body {
 	align-items: center;
 	flex-direction: column;
 	font-family: 'Montserrat', sans-serif;
-	height: 100vh;
-	margin: -20px 0 50px;
+	min-height: 100vh;
+	margin: 0;
+	padding: 20px;
 }
 
 body.login-page {
@@ -81,7 +82,7 @@ form {
 	align-items: center;
 	justify-content: center;
 	flex-direction: column;
-	padding: 0 50px;
+	padding: 0 20px;
 	height: 100%;
 	text-align: center;
 }
@@ -92,6 +93,8 @@ input {
 	padding: 12px 15px;
 	margin: 8px 0;
 	width: 100%;
+	font-size: 16px;
+	border-radius: 5px;
 }
 
 .container {
@@ -135,6 +138,73 @@ input {
 	opacity: 1;
 	z-index: 5;
 	animation: show 0.6s;
+}
+
+/* Mobile Login Responsive */
+@media (max-width: 768px) {
+	.container {
+		width: 100%;
+		min-height: auto;
+		max-height: 100vh;
+	}
+	
+	.form-container {
+		width: 100% !important;
+		position: static !important;
+		opacity: 1 !important;
+		z-index: 1 !important;
+		transform: none !important;
+	}
+	
+	.sign-in-container {
+		width: 100%;
+	}
+	
+	.sign-up-container {
+		width: 100%;
+		display: none;
+	}
+	
+	.container.right-panel-active .sign-in-container {
+		display: none;
+		transform: none;
+	}
+	
+	.container.right-panel-active .sign-up-container {
+		display: block;
+		transform: none;
+	}
+	
+	.overlay-container {
+		display: none !important;
+	}
+	
+	form {
+		padding: 20px 15px;
+	}
+	
+	h1 {
+		font-size: 20px;
+	}
+	
+	p {
+		font-size: 13px;
+	}
+}
+
+@media (max-width: 480px) {
+	form {
+		padding: 15px 12px;
+	}
+	
+	h1 {
+		font-size: 18px;
+	}
+	
+	button {
+		padding: 10px 30px;
+		font-size: 11px;
+	}
 }
 
 @keyframes show {
