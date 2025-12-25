@@ -20,11 +20,10 @@
                 <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
                 <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight:  bold;">Overview</a></li>
                 <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
-                <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
-                <li class="active"><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
+                <li class="active"><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
             </ul>
 
-            <div class="help-center">
+            <div class="help-center">                          
                 <a href="#" style="text-decoration:none; color:inherit;"><p>Help Centre</p></a><br>
                 <a href="{{ url_for('terms') }}" style="text-decoration:none; color:inherit;"><p>Terms & Conditions</p></a><br>
                 <a href="{{ url_for('privacy') }}" style="text-decoration:none; color:inherit;"><p>Privacy & Policy</p></a>
@@ -39,21 +38,20 @@
                 </div>
                 <div class="top-icons">
                     <i>🔔</i>
-                    <a href="{{ url_for('dashboard_view') }}" style="text-decoration:none; color:inherit;"><i>👤</i></a>
                 </div>
             </header>
 
             <!-- Success/Error Messages -->
             {% if request.query_params.get('success') %}
             <div class="alert alert-success">
-                ✓ {{ request.query_params. get('success') }}
+                ✓ {{ request.query_params.get('success') }}
                 <span onclick="this.parentElement.style.display='none';" style="cursor:pointer; float:right;">×</span>
             </div>
             {% endif %}
             {% if request.query_params.get('error') %}
             <div class="alert alert-error">
                 ✗ {{ request.query_params.get('error') }}
-                <span onclick="this.parentElement.style. display='none';" style="cursor:pointer; float:right;">×</span>
+                <span onclick="this.parentElement.style.display='none';" style="cursor:pointer; float:right;">×</span>
             </div>
             {% endif %}
 
@@ -84,7 +82,7 @@
                             <tr>
                                 <td>{{ employee.employee_number or 'N/A' }}</td>
                                 <td>{{ employee.name }}</td>
-                                <td>{{ employee. phone or 'N/A' }}</td>
+                                <td>{{ employee.phone or 'N/A' }}</td>
                                 <td>{{ employee.job_role or 'Employee' }}</td>
                                 <td>{{ employee.total_working }}</td>
                                 <td>
@@ -109,6 +107,101 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Add/Edit Employee Modal -->
+    <div id="employeeModal" class="modal hidden" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: white; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <span onclick="closeEmployeeModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h3 id="modalTitle" style="margin-top: 0; color: #221f1eff;">Add New Employee</h3>
+            <form id="employeeForm" method="POST" action="{{ url_for('manage_employee') }}">
+                <input type="hidden" name="action" id="formAction" value="add">
+                <input type="hidden" name="email" id="editEmail">
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="name" style="display: block; margin-bottom: 5px; font-weight: bold;">Full Name *</label>
+                    <input type="text" id="name" name="name" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="email" style="display: block; margin-bottom: 5px; font-weight: bold;">Email *</label>
+                    <input type="email" id="email" name="new_email" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="password" style="display: block; margin-bottom: 5px; font-weight: bold;">Password *</label>
+                    <input type="password" id="password" name="password" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="phone" style="display: block; margin-bottom: 5px; font-weight: bold;">Phone</label>
+                    <input type="tel" id="phone" name="phone" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="employee_number" style="display: block; margin-bottom: 5px; font-weight: bold;">Employee ID</label>
+                    <input type="text" id="employee_number" name="employee_number" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="role" style="display: block; margin-bottom: 5px; font-weight: bold;">Role</label>
+                    <input type="text" id="role" name="job_role" value="Employee" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="dob" style="display: block; margin-bottom: 5px; font-weight: bold;">Date of Birth</label>
+                    <input type="date" id="dob" name="dob" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" onclick="closeEmployeeModal()" style="padding: 10px 20px; background-color: #ddd; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button type="submit" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manual Attendance Modal -->
+    <div id="attendanceModal" class="modal hidden" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: white; margin: 5% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <span onclick="closeAttendanceModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h3 style="margin-top: 0; color: #221f1eff;">Manual Attendance Record</h3>
+            <form id="attendanceForm" method="POST" action="{{ url_for('manual_attendance') }}">
+                <div style="margin-bottom: 15px;">
+                    <label for="employee_email" style="display: block; margin-bottom: 5px; font-weight: bold;">Select Employee *</label>
+                    <select id="employee_email" name="employee_email" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        <option value="">-- Choose Employee --</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.email }}">{{ emp.name }} ({{ emp.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="attendance_date" style="display: block; margin-bottom: 5px; font-weight: bold;">Date *</label>
+                    <input type="date" id="attendance_date" name="attendance_date" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="attendance_time" style="display: block; margin-bottom: 5px; font-weight: bold;">Time *</label>
+                    <input type="time" id="attendance_time" name="attendance_time" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="action" style="display: block; margin-bottom: 5px; font-weight: bold;">Action *</label>
+                    <select id="action" name="action" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                        <option value="">-- Select Action --</option>
+                        <option value="check-in">Check In</option>
+                        <option value="check-out">Check Out</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" onclick="closeAttendanceModal()" style="padding: 10px 20px; background-color: #ddd; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button type="submit" style="padding: 10px 20px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Add Attendance</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -145,6 +238,89 @@
                 row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         });
-    </script>
-</body>
-</html>
+
+        function openAddEmployeeModal() {
+            const modal = document.getElementById('employeeModal');
+            const form = document.getElementById('employeeForm');
+            const title = document.getElementById('modalTitle');
+            
+            title.textContent = 'Add New Employee';
+            form.reset();
+            document.getElementById('formAction').value = 'add';
+            document.getElementById('editEmail').value = '';
+            document.getElementById('email').disabled = false;
+            document.getElementById('password').required = true;
+            
+            modal.style.display = 'block';
+        }
+
+        function openManualAttendanceModal() {
+            const modal = document.getElementById('attendanceModal');
+            document.getElementById('attendanceForm').reset();
+            modal.style.display = 'block';
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').style.display = 'none';
+        }
+
+        function closeAttendanceModal() {
+            document.getElementById('attendanceModal').style.display = 'none';
+        }
+
+        function editEmployee(email) {
+            const modal = document.getElementById('employeeModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('employeeForm');
+            
+            title.textContent = 'Edit Employee';
+            document.getElementById('editEmail').value = email;
+            document.getElementById('formAction').value = 'edit';
+            document.getElementById('email').disabled = true;
+            document.getElementById('password').required = false;
+            
+            // Fetch employee details
+            fetch(`/api/employee/${email}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('name').value = data.name || '';
+                    document.getElementById('email').value = data.email || '';
+                    document.getElementById('phone').value = data.phone || '';
+                    document.getElementById('employee_number').value = data.employee_number || '';
+                    document.getElementById('role').value = data.job_role || 'Employee';
+                    document.getElementById('dob').value = data.dob || '';
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching employee:', error);
+                    alert('Error loading employee details');
+                });
+        }
+
+        function deleteEmployee(email) {
+            if (confirm('Are you sure you want to delete this employee?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ url_for("delete_employee") }}';
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'email';
+                input.value = email;
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const employeeModal = document.getElementById('employeeModal');
+            const attendanceModal = document.getElementById('attendanceModal');
+            
+            if (event.target == employeeModal) {
+                employeeModal.style.display = 'none';
+            }
+            if (event.target == attendanceModal) {
+                attendanceModal.style.display = 'none';
+            }
+        }

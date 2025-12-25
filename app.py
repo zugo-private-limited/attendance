@@ -47,12 +47,6 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Jinja2 Templates setup
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# --- Quick Render test route ---
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-
 @app.get("/", response_class=HTMLResponse, summary="Display login page")
 async def login_page(request: Request): 
     """Serves the login page."""
@@ -61,6 +55,10 @@ async def login_page(request: Request):
 @app.post("/", response_class=RedirectResponse)
 async def handle_login(request: Request, email: str = Form(...), password: str = Form(...), db = Depends(get_db_connection)):
     """Processes login form submission, authenticates user, and sets session."""
+    # Check if email is in allowed employees list
+    if email not in static_users:
+        return RedirectResponse(url="/?error=Access+Denied:+Not+an+authorized+employee", status_code=status.HTTP_303_SEE_OTHER)
+    
     employee = fetch_employee_by_email(db, email)
     if employee and employee["password"] == password:
         request.session["user_email"] = email
@@ -79,6 +77,10 @@ async def signup(
     db = Depends(get_db_connection)
 ):
     """Registers a new employee."""
+    # Check if email is in allowed employees list
+    if email not in static_users:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Email not authorized. Contact HR."})
+    
     if fetch_employee_by_email(db, email):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Email already registered"})
     
@@ -116,7 +118,8 @@ async def signup(
     request.session["user_email"] = email
     return RedirectResponse(url="/report", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.get("/report", response_class=HTMLResponse, summary="Display employee attendance")
+
+@app.get("/report", response_class=HTMLResponse, name="report", summary="Display employee attendance")
 async def report(request: Request, db = Depends(get_db_connection)):
     """Shows the main dashboard for a logged-in employee."""
     user_email = request.session.get("user_email")
@@ -491,7 +494,7 @@ async def delete_employee(
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
     if email == config.HR_EMAIL:
-        return RedirectResponse(url="/hr-management? error=Cannot delete HR account", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/hr-management?error=Cannot delete HR account", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
         cursor = db.cursor()
@@ -503,7 +506,7 @@ async def delete_employee(
         print(f"Database error: {err}")
         return RedirectResponse(url="/hr-management?error=Database error", status_code=status.HTTP_303_SEE_OTHER)
     
-    return RedirectResponse(url="/hr-management?success=Employee deleted", status_code=status. HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/hr-management?success=Employee deleted", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/manual-attendance", response_class=RedirectResponse, summary="Add manual attendance record")
 async def manual_attendance(
@@ -651,7 +654,7 @@ def _build_report_for_user(db, user_email, days:  int = 30):
     by_date = {}
     for r in rows:
         d = r["event_time"].date().isoformat()
-        by_date. setdefault(d, []).append(r)
+        by_date.setdefault(d, []).append(r)
 
     report = []
     total_working_seconds = 0

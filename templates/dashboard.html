@@ -80,12 +80,7 @@
             <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
             <li class="active"><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
             <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight:  bold;">Employee's</a></li>
-            {% if not is_hr %}
             <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
-            {% endif %}
-            {% if is_hr %}
-            <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Management</a></li>
-            {% endif %}
         </ul>
         <div class="help-center">
             <a href="#" style="text-decoration:none; color:inherit;"><p>Help Centre</p></a><br>
@@ -103,21 +98,21 @@
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
           <div id="notif" style="position: relative; display: inline-block; cursor: pointer;">
-            <span id="notifBell">🔔</span>
+            <span id="notifBell" style="font-size: 20px;">🔔</span>
             {% if error or success %}
             <span id="notifBadge" style="position: absolute; top:-6px; right:-6px; background:#e74c3c; color: white; border-radius:50%; padding:2px 6px; font-size:12px;">1</span>
             {% endif %}
-            <div id="notifDropdown" style="display:none; position:absolute; right: 0; top:26px; background: white; border:1px solid #ddd; box-shadow:0 2px 6px rgba(0,0,0,0.15); width:320px; z-index:200;">
-              <div style="padding:  10px; font-weight:bold; border-bottom:1px solid #eee;">Notifications</div>
-              <div style="max-height:200px; overflow:  auto;">
+            <div id="notifDropdown" style="display:none; position:fixed; right: 10px; top: auto; background: white; border:1px solid #ddd; box-shadow:0 2px 10px rgba(0,0,0,0.2); width: calc(100% - 20px); max-width: 350px; z-index:200; border-radius: 6px;">
+              <div style="padding: 12px; font-weight:bold; border-bottom:1px solid #eee; background-color: #f9f9f9;">Notifications</div>
+              <div style="max-height:250px; overflow-y: auto;">
                 {% if error %}
-                  <div style="padding: 10px; border-bottom:1px solid #f5f5f5; color:#c0392b;">⚠️ {{ error | replace('+',' ') }}</div>
+                  <div style="padding: 12px; border-bottom:1px solid #f5f5f5; color:#c0392b; background-color: #fadbd8; border-left: 4px solid #c0392b;">⚠️ {{ error | replace('+',' ') }}</div>
                 {% endif %}
                 {% if success %}
-                  <div style="padding:10px; border-bottom:1px solid #f5f5f5; color:#2ecc71;">✅ {{ success | replace('+',' ') }}</div>
+                  <div style="padding:12px; border-bottom:1px solid #f5f5f5; color:#27ae60; background-color: #d5f4e6; border-left: 4px solid #27ae60;">✅ {{ success | replace('+',' ') }}</div>
                 {% endif %}
                 {% if not (error or success) %}
-                  <div style="padding:10px; color:#666;">No notifications</div>
+                  <div style="padding:12px; color:#999; text-align: center;">No notifications</div>
                 {% endif %}
               </div>
             </div>

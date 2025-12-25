@@ -18,9 +18,6 @@
                 <li><a href="{{ url_for('dashboard') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
                 <li><a href="{{ url_for('employees') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
                 <li><a href="{{ url_for('attendance_page') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
-                {% if is_hr %}
-                <li><a href="{{ url_for('hr_management') }}" style="color: #e74c3c; font-weight: bold;">Management</a></li>
-                {% endif %}
             </ul>
 
             <div class="help-center">
