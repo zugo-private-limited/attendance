@@ -1,9 +1,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>{{ "HR Dashboard" if is_hr else "Employee Directory" }} - Zugo</title>
     <link rel="stylesheet" href="{{ url_for('static', path='employee.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', path='mobile.css') }}" />
 </head>
 <body>
     <div class="dashboard">
@@ -56,15 +59,17 @@
                             <tr>
                                 <th>Employee ID</th>
                                 <th>Employee Name</th>
+                                <th>Joining Date</th>
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Phone</th>
                                 {% if is_hr %}
-                                <th>Parent Number</th>
                                 <th>Aadhar Number</th>
-                                <th>Joining Date</th>
+                                <th>Pan Card</th>
+                                <th>Salary</th>
+                                <th>Bank details</th>
                                 {% endif %}
-                                <th>Present Today</th>
+                                <th>Present </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -72,13 +77,15 @@
                             <tr>
                                 <td>{{ employee.employee_number or 'N/A' }}</td>
                                 <td>{{ employee.name }}</td>
+                                <td>{{ employee.joining_date }}</td>
                                 <td>{{ employee.email }}</td>
                                 <td>{{ employee. job_role or 'Employee' }}</td>
                                 <td>{{ employee.phone or 'N/A' }}</td>
                                 {% if is_hr %}
-                                <td>{{ employee.parent_phone }}</td>
                                 <td>{{ employee.aadhar }}</td>
-                                <td>{{ employee.joining_date }}</td>
+                                <td>{{ employee.pan_card }}</td>
+                                <td>₹{{ employee.salary or 'Not Set' }}</td>
+                                <td>{{ employee.bank_details or 'Not Set' }}</td>
                                 {% endif %}
                                 <td>
                                     {% if employee.present_today %}
@@ -140,6 +147,11 @@
                         <div class="form-group">
                             <label for="dob">Date of Birth</label>
                             <input type="date" id="dob" name="dob">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="salary">Salary</label>
+                            <input type="text" id="salary" name="salary">
                         </div>
                         
                         <div class="modal-actions">
