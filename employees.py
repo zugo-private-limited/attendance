@@ -58,7 +58,7 @@ users = {
         "aadhar": "2028 9976 5232",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "29,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -79,7 +79,7 @@ users = {
         "aadhar": "6154 6184 1827",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "35,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -100,7 +100,7 @@ users = {
         "aadhar": "6162 1005 8657",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "23,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -121,7 +121,7 @@ users = {
         "aadhar": "2248 2601 3305",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "42,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -142,7 +142,7 @@ users = {
         "aadhar": "6072 9860 6570",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "35,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -163,7 +163,7 @@ users = {
         "aadhar": "3655 3245 0652",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "29,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -184,7 +184,7 @@ users = {
         "aadhar": "7874 0307 1611",
         "pan_card": "",
         "bank_details": "",
-        "salary": "",
+        "salary": "35,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -205,7 +205,7 @@ users = {
         "aadhar": "9876 5432 1098",
         "pan_card": "HDQPP9823Q",
         "bank_details": "Tamilnad Mercantile Bank, A/C No: 075100050318845, IFSC: TMBL0000075",
-        "salary": "",
+        "salary": "15,000",
         "total_leave": 0,
         "total_working": 0
     },
@@ -226,8 +226,50 @@ users = {
         "aadhar": "4364 1864 3426",
         "pan_card": "",
         "bank_details": "Indian Bank, A/C No: 923497413, Branch: Okkur, IFSC: IDIB000O020",
-        "salary": "",
+        "salary": "17,000",
         "total_leave": 0,
         "total_working": 0
+    },
+    "blessitazugopvt@gmail.com": {
+        "password": " Blessita123 ",
+       "name": " Blessita A",
+        "email": " a.blessita@gmail.com",
+        "photo": "static/blessita.jpeg ", 
+        "joining_date": " 10-12-2025 ",
+        "employee_number": " 13 ",
+        "phone":" 9894307598 ",
+        "parent_phone": " 9363455343 ",
+        "dob": " 30/08/2001 ",
+        "gender": " Female ",
+        "job_role": " Business Development Manager",
+        "native": " Thoothukudi",
+        "address": " 14A WD17, Palanimalai Devar st., Anna Nagar, Irugur, Coimbatore - 641 103",
+        "aadhar": " 2743 0616 4854 ",
+        "pan_card": " FRAPB5854F ",
+        "bank_details": "Account Number 50100717344690 ,Name: BLESSITA ,Bank Name: HDFC,Branch: RAJA STREET,IFSC Code: HDFC0008898",
+        "salary": "40,000 ",
+        "total_leave": 0,
+        "total_working": 0
+    },
+    "sarathzugopvt@gmail.com": {
+        "password": "Sarath@123",
+        "name": "SARATH KUMAR J",
+        "email": "sarathzugopvt@gmail.com ",
+        "photo": "static/Sarath.jpg",   
+        "joining_date": "02/12/2025",
+        "employee_number": " ZPL014 ",
+        "phone":" 6369416974 ",
+        "parent_phone": " 8667702580 ",
+        "dob": " 09/07/2002 ",
+        "gender": " Male ",
+        "job_role": " Social Media Manager ",   
+        "native": " Tiruppur ",
+        "address": " D/N0- 86 Bharathi Nagar Chandrapuram East Tirupur 641604 ",
+        "aadhar": " 606426886637 ", 
+        "pan_card": " OXOPS5888D ",
+        "bank_details": " Kotak Mahindra Bank , A/C No: 9146615611 , IFSC Code: KKBK0008805 ",
+        "salary": " 15000 ",
+        "total_leave": 0,
+        "total_working": 0  
     }
 }
