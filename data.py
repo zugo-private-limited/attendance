@@ -240,3 +240,123 @@ def fetch_monthly_attendance_all(year: int, month: int) -> List[Dict]:
     cursor.close()
     conn.close()
     return records
+
+
+# ===========================================================================
+# EMPLOYEE COMMENTS/MESSAGES FUNCTIONS
+# ===========================================================================
+
+def submit_employee_comment(db, employee_email: str, comment_text: str, attendance_date: date = None) -> bool:
+    """
+    Submit a comment from employee to HR.
+    
+    Args:
+        db: Database connection
+        employee_email: Email of employee submitting comment
+        comment_text: The comment text
+        attendance_date: Date of the comment (default: today)
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        if attendance_date is None:
+            attendance_date = date.today()
+        
+        cursor = db.cursor()
+        cursor.execute(
+            """INSERT INTO employee_comments 
+               (employee_email, comment_text, attendance_date, is_read)
+               VALUES (%s, %s, %s, %s)""",
+            (employee_email, comment_text, attendance_date, False)
+        )
+        db.commit()
+        cursor.close()
+        return True
+    except psycopg2.Error as e:
+        print(f"Error submitting comment: {e}")
+        return False
+
+
+def get_employee_comments(db, employee_email: str, limit: int = 10) -> List[Dict]:
+    """Get all comments from a specific employee."""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute(
+        """SELECT * FROM employee_comments 
+           WHERE employee_email = %s 
+           ORDER BY created_at DESC 
+           LIMIT %s""",
+        (employee_email, limit)
+    )
+    comments = cursor.fetchall()
+    cursor.close()
+    return comments
+
+
+def get_unread_comments_for_hr(db) -> List[Dict]:
+    """Get all unread comments for HR (new notifications)."""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute(
+        """SELECT * FROM employee_comments 
+           WHERE is_read = FALSE 
+           ORDER BY created_at DESC"""
+    )
+    comments = cursor.fetchall()
+    cursor.close()
+    return comments
+
+
+def get_all_comments_for_hr(db, limit: int = 50, offset: int = 0) -> List[Dict]:
+    """Get all comments for HR dashboard."""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute(
+        """SELECT c.*, e.name, e.photo 
+           FROM employee_comments c
+           LEFT JOIN employee_details e ON c.employee_email = e.email
+           ORDER BY c.created_at DESC 
+           LIMIT %s OFFSET %s""",
+        (limit, offset)
+    )
+    comments = cursor.fetchall()
+    cursor.close()
+    return comments
+
+
+def mark_comment_as_read(db, comment_id: int) -> bool:
+    """Mark a comment as read by HR."""
+    try:
+        cursor = db.cursor()
+        cursor.execute(
+            """UPDATE employee_comments 
+               SET is_read = TRUE, read_by_hr_at = CURRENT_TIMESTAMP
+               WHERE id = %s""",
+            (comment_id,)
+        )
+        db.commit()
+        cursor.close()
+        return True
+    except psycopg2.Error as e:
+        print(f"Error marking comment as read: {e}")
+        return False
+
+
+def delete_comment(db, comment_id: int) -> bool:
+    """Delete a comment (HR only)."""
+    try:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM employee_comments WHERE id = %s", (comment_id,))
+        db.commit()
+        cursor.close()
+        return True
+    except psycopg2.Error as e:
+        print(f"Error deleting comment: {e}")
+        return False
+
+
+def get_unread_comment_count(db) -> int:
+    """Get count of unread comments for HR."""
+    cursor = db.cursor()
+    cursor.execute("SELECT COUNT(*) FROM employee_comments WHERE is_read = FALSE")
+    count = cursor.fetchone()[0]
+    cursor.close()
+    return count

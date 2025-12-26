@@ -70,6 +70,9 @@
                                 <th>Bank details</th>
                                 {% endif %}
                                 <th>Present </th>
+                                {% if is_hr %}
+                                <th style="text-align: center;">Actions</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -94,10 +97,16 @@
                                     <span class="status-badge absent">Absent</span>
                                     {% endif %}
                                 </td>
+                                {% if is_hr %}
+                                <td style="text-align: center;">
+                                    <button onclick="editEmployee('{{ employee.email }}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 3px;">Edit</button>
+                                    <button onclick="deleteEmployee('{{ employee.email }}', '{{ employee.name }}')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;">Delete</button>
+                                </td>
+                                {% endif %}
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="{{ 9 if is_hr else 6 }}">No employee records found.</td>
+                                <td colspan="{{ 11 if is_hr else 7 }}">No employee records found.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -110,7 +119,7 @@
             <div id="employeeModal" class="modal hidden">
                 <div class="modal-content">
                     <h3 id="modalTitle">Add New Employee</h3>
-                    <form id="employeeForm" method="POST" action="{{ url_for('manage_employee') }}">
+                    <form id="employeeForm" onsubmit="handleEmployeeFormSubmit(event)">
                         <input type="hidden" name="action" id="formAction" value="add">
                         <input type="hidden" name="email" id="editEmail">
                         
@@ -215,8 +224,110 @@
             modal.classList.remove('hidden');
         }
 
+        function editEmployee(email) {
+            const modal = document.getElementById('employeeModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('employeeForm');
+            
+            title.textContent = 'Edit Employee Details';
+            document.getElementById('editEmail').value = email;
+            document.getElementById('formAction').value = 'edit';
+            document.getElementById('email').disabled = true;
+            document.getElementById('password').required = false;
+            document.getElementById('password').placeholder = 'Leave blank to keep current password';
+            
+            // Fetch employee details
+            fetch(`/api/employee/${encodeURIComponent(email)}`)
+                .then(res => res.json())
+                .then(emp => {
+                    document.getElementById('name').value = emp.name || '';
+                    document.getElementById('email').value = emp.email || '';
+                    document.getElementById('phone').value = emp.phone || '';
+                    document.getElementById('employee_number').value = emp.employee_number || '';
+                    document.getElementById('role').value = emp.job_role || 'Employee';
+                    document.getElementById('dob').value = emp.dob || '';
+                    document.getElementById('salary').value = emp.salary || '';
+                    
+                    // Clear password field for edits
+                    document.getElementById('password').value = '';
+                    
+                    modal.classList.remove('hidden');
+                })
+                .catch(err => {
+                    alert('Error loading employee details: ' + err);
+                    modal.classList.add('hidden');
+                });
+        }
+
+        function deleteEmployee(email, name) {
+            if (!confirm(`⚠️ Are you sure you want to DELETE ${name}?\n\nThis action CANNOT be undone!`)) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('email', email);
+            
+            fetch('/api/hr/delete-employee', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ ${name} has been deleted successfully`);
+                    location.reload();
+                } else {
+                    alert('❌ Error deleting employee: ' + (data.detail || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('❌ Error deleting employee: ' + err);
+            });
+        }
+
         function closeModal() {
             document.getElementById('employeeModal').classList.add('hidden');
+        }
+
+        function handleEmployeeFormSubmit(event) {
+            event.preventDefault();
+            
+            const action = document.getElementById('formAction').value;
+            const email = document.getElementById('editEmail').value;
+            const formData = new FormData();
+            
+            formData.append('name', document.getElementById('name').value);
+            formData.append('phone', document.getElementById('phone').value);
+            formData.append('employee_number', document.getElementById('employee_number').value);
+            formData.append('job_role', document.getElementById('role').value);
+            formData.append('dob', document.getElementById('dob').value);
+            formData.append('salary', document.getElementById('salary').value);
+            
+            if (action === 'edit') {
+                formData.append('email', email);
+                
+                fetch('/api/hr/edit-employee', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Employee details updated successfully');
+                        location.reload();
+                    } else {
+                        alert('❌ Error updating employee: ' + (data.detail || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('❌ Error updating employee: ' + err);
+                });
+            } else {
+                // Add new employee logic would go here
+                alert('Add employee feature coming soon');
+            }
+            
+            closeModal();
         }
         {% endif %}
     </script>

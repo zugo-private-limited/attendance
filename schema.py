@@ -51,13 +51,25 @@ def initialize_database_schema():
                     event_time TIMESTAMP NOT NULL,
                     latitude NUMERIC(10,7) NULL,
                     longitude NUMERIC(10,7) NULL,
-                    location_text VARCHAR(255) NULL
+                    location_text VARCHAR(255) NULL,
+                    comment TEXT NULL
                 )
             """)
             print("Created/verified attendance table")
         except psycopg2.Error as e:
             if "already exists" not in str(e):
                 print(f"Error creating attendance table: {e}")
+        
+        # Add comment column if it doesn't exist (for existing databases)
+        try:
+            cursor.execute("""
+                ALTER TABLE attendance 
+                ADD COLUMN IF NOT EXISTS comment TEXT NULL
+            """)
+            print("Verified comment column in attendance table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
         
         # Create index separately
         try:
@@ -99,6 +111,36 @@ def initialize_database_schema():
         except psycopg2.Error as e:
             if "already exists" not in str(e):
                 print(f"Error creating employee_details table: {e}")
+
+        # 3. Employee Comments/Messages Table (for employee-to-HR communication)
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS employee_comments (
+                    id SERIAL PRIMARY KEY,
+                    employee_email VARCHAR(255) NOT NULL,
+                    comment_text TEXT NOT NULL,
+                    attendance_date DATE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_read BOOLEAN DEFAULT FALSE,
+                    read_by_hr_at TIMESTAMP NULL,
+                    FOREIGN KEY (employee_email) REFERENCES employee_details(email) ON DELETE CASCADE
+                )
+            """)
+            print("Created/verified employee_comments table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating employee_comments table: {e}")
+
+        # Create index on employee_comments
+        try:
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_comments_employee_date 
+                ON employee_comments (employee_email, attendance_date)
+            """)
+            print("Created/verified comments index")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating comments index: {e}")
 
         conn.commit()
 

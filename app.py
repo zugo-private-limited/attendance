@@ -16,7 +16,11 @@ from starlette.middleware.sessions import SessionMiddleware
 #  --- Local Imports ---
 import config
 from employees import users as static_users 
-from data import get_db_connection, fetch_attendance_for_today, fetch_all_employees, fetch_employee_by_email
+from data import (
+    get_db_connection, fetch_attendance_for_today, fetch_all_employees, fetch_employee_by_email,
+    submit_employee_comment, get_employee_comments, get_unread_comments_for_hr, 
+    get_all_comments_for_hr, mark_comment_as_read, get_unread_comment_count
+)
 from services import calculate_working_days_and_leaves_for_employee, is_at_office
 from schema import initialize_database_schema 
 
@@ -207,6 +211,7 @@ async def handle_attendance(
     action: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
+    comment: str = Form(None),
     db = Depends(get_db_connection)
 ):
     """Processes check-in and check-out requests."""
@@ -282,10 +287,10 @@ async def handle_attendance(
         cursor.execute(
             """
             INSERT INTO attendance 
-            (user_email, action, event_time, latitude, longitude, location_text)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (user_email, action, event_time, latitude, longitude, location_text, comment)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_email, action, now, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}")
+            (user_email, action, now, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}", comment if comment else None)
         )
         db.commit()
         cursor.close()
@@ -377,6 +382,14 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
                 (email, today)
             )
             emp["present_today"] = bool(cursor.fetchone())
+            
+            # Fetch latest comment from employee
+            cursor.execute(
+                "SELECT comment FROM attendance WHERE user_email = %s AND comment IS NOT NULL ORDER BY event_time DESC LIMIT 1",
+                (email,)
+            )
+            comment_record = cursor.fetchone()
+            emp["last_comment"] = comment_record.get("comment") if comment_record else None
         
         static_data = static_users.get(emp['email'], {})
         emp['salary'] = static_data.get('salary', 'Not Set')
@@ -399,6 +412,22 @@ async def get_employee_api(email: str, request: Request, db = Depends(get_db_con
     
     employee = fetch_employee_by_email(db, email)
     if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    return employee
+
+@app.get("/api/check-hr-access", summary="Check if user has HR access")
+async def check_hr_access(request: Request):
+    """Check if logged-in user has HR access."""
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return {"is_hr": False, "message": "Not logged in"}
+    
+    is_hr = user_email == config.HR_EMAIL
+    if is_hr:
+        return {"is_hr": True, "email": user_email, "message": "HR access granted"}
+    else:
+        return {"is_hr": False, "email": user_email, "message": "Regular employee access only"}
         raise HTTPException(status_code=404, detail="Employee not found")
     
     return employee
@@ -690,7 +719,221 @@ def _build_report_for_user(db, user_email, days:  int = 30):
     return report, total_working_seconds
 
 # ===========================================================================
-# MAIN EXECUTION
+# EMPLOYEE COMMENTS & MESSAGING ENDPOINTS
+# ===========================================================================
+
+@app.post("/api/submit-comment", summary="Submit a comment to HR")
+async def submit_comment(
+    request: Request,
+    comment_text: str = Form(...),
+    db = Depends(get_db_connection)
+):
+    """Allow employees to submit comments/messages to HR."""
+    user_email = request.session.get("user_email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    if user_email == config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR cannot submit comments")
+    
+    if not comment_text or not comment_text.strip():
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+    
+    success = submit_employee_comment(db, user_email, comment_text.strip())
+    
+    if success:
+        return {"success": True, "message": "Comment submitted successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to submit comment")
+
+
+@app.get("/api/my-comments", summary="Get my submitted comments")
+async def get_my_comments(request: Request, db = Depends(get_db_connection)):
+    """Get all comments submitted by the logged-in employee."""
+    user_email = request.session.get("user_email")
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    comments = get_employee_comments(db, user_email)
+    return {"comments": comments}
+
+
+@app.get("/api/hr/unread-comments-count", summary="Get unread comment count for HR")
+async def get_unread_count(request: Request, db = Depends(get_db_connection)):
+    """Get count of unread comments for HR notification badge."""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    count = get_unread_comment_count(db)
+    return {"unread_count": count}
+
+
+@app.get("/api/hr/comments", summary="Get all comments for HR")
+async def get_hr_comments(
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
+    db = Depends(get_db_connection)
+):
+    """Get all employee comments for HR dashboard."""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    comments = get_all_comments_for_hr(db, limit, offset)
+    unread_count = get_unread_comment_count(db)
+    
+    return {
+        "comments": comments,
+        "unread_count": unread_count,
+        "total": len(comments)
+    }
+
+
+@app.post("/api/hr/mark-comment-read/{comment_id}", summary="Mark comment as read")
+async def mark_read(
+    comment_id: int,
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Mark a comment as read by HR."""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    success = mark_comment_as_read(db, comment_id)
+    
+    if success:
+        return {"success": True, "message": "Comment marked as read"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to mark comment as read")
+
+
+@app.delete("/api/hr/delete-comment/{comment_id}", summary="Delete a comment")
+async def delete_comment_endpoint(
+    comment_id: int,
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Delete a comment (HR only)."""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    from data import delete_comment
+    success = delete_comment(db, comment_id)
+    
+    if success:
+        return {"success": True, "message": "Comment deleted"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete comment")
+
+
+@app.post("/api/hr/edit-employee", summary="Edit employee details")
+async def edit_employee_details(
+    email: str = Form(...),
+    name: str = Form(None),
+    phone: str = Form(None),
+    parent_phone: str = Form(None),
+    dob: str = Form(None),
+    gender: str = Form(None),
+    employee_number: str = Form(None),
+    aadhar: str = Form(None),
+    joining_date: str = Form(None),
+    native: str = Form(None),
+    address: str = Form(None),
+    job_role: str = Form(None),
+    request: Request = None,
+    db = Depends(get_db_connection)
+):
+    """Allow HR to edit employee details."""
+    user_email = request.session.get("user_email") if request else None
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    try:
+        cursor = db.cursor()
+        update_fields = []
+        update_values = []
+        
+        if name is not None:
+            update_fields.append("name = %s")
+            update_values.append(name)
+        if phone is not None:
+            update_fields.append("phone = %s")
+            update_values.append(phone)
+        if parent_phone is not None:
+            update_fields.append("parent_phone = %s")
+            update_values.append(parent_phone)
+        if dob is not None:
+            update_fields.append("dob = %s")
+            update_values.append(dob)
+        if gender is not None:
+            update_fields.append("gender = %s")
+            update_values.append(gender)
+        if employee_number is not None:
+            update_fields.append("employee_number = %s")
+            update_values.append(employee_number)
+        if aadhar is not None:
+            update_fields.append("aadhar = %s")
+            update_values.append(aadhar)
+        if joining_date is not None:
+            update_fields.append("joining_date = %s")
+            update_values.append(joining_date)
+        if native is not None:
+            update_fields.append("native = %s")
+            update_values.append(native)
+        if address is not None:
+            update_fields.append("address = %s")
+            update_values.append(address)
+        if job_role is not None:
+            update_fields.append("job_role = %s")
+            update_values.append(job_role)
+        
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        update_values.append(email)
+        
+        query = f"UPDATE employee_details SET {', '.join(update_fields)} WHERE email = %s"
+        cursor.execute(query, update_values)
+        db.commit()
+        cursor.close()
+        
+        return {"success": True, "message": "Employee details updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating employee: {str(e)}")
+
+
+@app.post("/api/hr/delete-employee", summary="Delete employee")
+async def delete_employee_endpoint(
+    email: str = Form(...),
+    request: Request = None,
+    db = Depends(get_db_connection)
+):
+    """Allow HR to delete an employee."""
+    user_email = request.session.get("user_email") if request else None
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="HR access required")
+    
+    if email == config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="Cannot delete HR account")
+    
+    try:
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM employee_details WHERE email = %s", (email,))
+        db.commit()
+        cursor.close()
+        
+        return {"success": True, "message": "Employee deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting employee: {str(e)}")
+
+
+# ===========================================================================
+# REPORT BUILDER FUNCTION
 # ===========================================================================
 
 if __name__ == "__main__":  

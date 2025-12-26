@@ -48,6 +48,16 @@
             const lat = form.querySelector('[name="latitude"]').value;
             const lon = form.querySelector('[name="longitude"]').value;
             
+            // Add comment if present
+            const commentBox = document.getElementById('checkin_comment');
+            if (commentBox && commentBox.value.trim()) {
+                const commentInput = document.createElement('input');
+                commentInput.type = 'hidden';
+                commentInput.name = 'comment';
+                commentInput.value = commentBox.value.trim();
+                form.appendChild(commentInput);
+            }
+            
             if (!lat || !lon) {
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(function(position) {
@@ -156,6 +166,39 @@
                             <input type="hidden" id="longitude_checkout" name="longitude">
                             <button type="submit" class="checkout-btn">🚪 Check-Out</button>
                         </form>
+                    </div>
+                    
+                    <!-- Comment Box Section -->
+                    <div class="card" style="margin-top: 20px; background-color: #f8f9fa;">
+                        <h3 style="color: #221f1e; margin-top: 0;">Send Message to HR</h3>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Have any questions or concerns? Leave a message for your HR manager</p>
+                        
+                        <form id="commentForm" style="margin-bottom: 20px;">
+                            <textarea 
+                                id="commentBox" 
+                                name="comment_text" 
+                                placeholder="Type your message here... (e.g., Leave request, issue report, feedback)" 
+                                style="width: 100%; min-height: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: Arial, sans-serif; resize: vertical; font-size: 14px;"
+                                required
+                            ></textarea>
+                            <button 
+                                type="submit" 
+                                style="margin-top: 10px; padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background-color 0.3s;"
+                                onmouseover="this.style.backgroundColor='#2980b9'"
+                                onmouseout="this.style.backgroundColor='#3498db'"
+                            >
+                                📤 Send Message
+                            </button>
+                        </form>
+
+                        <div id="commentStatus" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold;"></div>
+
+                        <div style="border-top: 1px solid #ddd; padding-top: 15px;">
+                            <h4 style="color: #221f1e; margin-top: 0;">Your Messages</h4>
+                            <div id="commentsList" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: #999; text-align: center; padding: 20px;">Loading your messages...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -268,6 +311,95 @@ window.addEventListener('resize', function() {
     if (window.innerWidth > 768) {
         sidebar.classList.remove('open');
     }
+});
+
+// ===== COMMENT FUNCTIONALITY =====
+document.addEventListener('DOMContentLoaded', function() {
+    const commentForm = document.getElementById('commentForm');
+    const commentBox = document.getElementById('commentBox');
+    const commentStatus = document.getElementById('commentStatus');
+    const commentsList = document.getElementById('commentsList');
+
+    if (!commentForm) return; // HR users won't have the form
+
+    // Load existing comments
+    function loadComments() {
+        fetch('/api/my-comments')
+            .then(response => response.json())
+            .then(data => {
+                if (data.comments && data.comments.length > 0) {
+                    let html = '';
+                    data.comments.forEach(comment => {
+                        const date = new Date(comment.created_at).toLocaleString();
+                        const readStatus = comment.is_read ? '✅ Read by HR' : '⏳ Pending';
+                        html += `
+                            <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background-color: white;">
+                                <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                                    <strong>${date}</strong> - ${readStatus}
+                                </div>
+                                <div style="color: #333; word-wrap: break-word;">${comment.comment_text}</div>
+                            </div>
+                        `;
+                    });
+                    commentsList.innerHTML = html;
+                } else {
+                    commentsList.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No messages yet</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading comments:', error);
+                commentsList.innerHTML = '<p style="color: #c0392b; text-align: center; padding: 20px;">⚠️ Error loading messages</p>';
+            });
+    }
+
+    // Submit comment
+    commentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const text = commentBox.value.trim();
+        if (!text) {
+            showStatus('Please enter a message', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('comment_text', text);
+
+        fetch('/api/submit-comment', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showStatus('✅ Message sent successfully!', 'success');
+                commentBox.value = '';
+                setTimeout(() => {
+                    loadComments();
+                }, 500);
+            } else {
+                showStatus('❌ Error sending message', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showStatus('❌ Error sending message', 'error');
+        });
+    });
+
+    function showStatus(message, type) {
+        commentStatus.textContent = message;
+        commentStatus.style.display = 'block';
+        commentStatus.style.backgroundColor = type === 'success' ? '#d5f4e6' : '#fadbd8';
+        commentStatus.style.color = type === 'success' ? '#27ae60' : '#c0392b';
+        
+        setTimeout(() => {
+            commentStatus.style.display = 'none';
+        }, 5000);
+    }
+
+    // Load comments on page load
+    loadComments();
 });
 </script>
 

@@ -210,7 +210,7 @@ users = {
         "total_working": 0
     },
     "afrinzugopvt@gmail.com": {
-        "password": "afrinA@123",
+        "password": "afrin@123",
         "name": "A. AFRIN MEKHANAS",
         "email": "afrinappas56@gmail.com",
         "photo": "static/afrin.jpeg",

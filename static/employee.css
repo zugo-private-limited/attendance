@@ -185,6 +185,39 @@ body {
   background: #159b70;
 }
 
+.btn-blue {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.btn-blue:hover {
+  background: #2980b9;
+}
+
+.btn-purple {
+  background: #9b59b6;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-purple:hover {
+  background: #8e44ad;
+}
+
 .table-container {
   background: white;
   padding: 20px;
