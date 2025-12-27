@@ -101,6 +101,9 @@ def initialize_database_schema():
                     joining_date VARCHAR(50),
                     native VARCHAR(255),
                     address TEXT,
+                    pan_card VARCHAR(50),
+                    bank_details VARCHAR(255),
+                    salary VARCHAR(50),
                     total_leave INT DEFAULT 0,
                     total_working INT DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -111,6 +114,37 @@ def initialize_database_schema():
         except psycopg2.Error as e:
             if "already exists" not in str(e):
                 print(f"Error creating employee_details table: {e}")
+
+        # Add missing columns if they don't exist (for existing databases)
+        try:
+            cursor.execute("""
+                ALTER TABLE employee_details 
+                ADD COLUMN IF NOT EXISTS pan_card VARCHAR(50)
+            """)
+            print("Verified pan_card column in employee_details table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
+
+        try:
+            cursor.execute("""
+                ALTER TABLE employee_details 
+                ADD COLUMN IF NOT EXISTS bank_details VARCHAR(255)
+            """)
+            print("Verified bank_details column in employee_details table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
+
+        try:
+            cursor.execute("""
+                ALTER TABLE employee_details 
+                ADD COLUMN IF NOT EXISTS salary VARCHAR(50)
+            """)
+            print("Verified salary column in employee_details table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
 
         # 3. Employee Comments/Messages Table (for employee-to-HR communication)
         try:

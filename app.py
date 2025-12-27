@@ -109,15 +109,18 @@ async def signup(
         photo = "profile.jpg"
         phone = parent_phone = dob = gender = employee_number = aadhar = joining_date = native = address = None
         job_role = "Employee"
+        pan_card = None
+        salary = None
+        bank_details = None
     
     cursor = db.cursor()
     cursor.execute(
         """INSERT INTO employee_details 
            (name, email, password, photo, phone, parent_phone, dob, gender, 
-            employee_number, aadhar, joining_date, native, address, job_role,pan_card, salary, bank_details)
+            employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details)
            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (name, email, password, photo, phone, parent_phone, dob, gender,
-         employee_number, aadhar, joining_date, native, address, job_role)
+         employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details)
     )
     db.commit()
     cursor.close()
@@ -440,11 +443,19 @@ async def manage_employee(
     new_email: str = Form(...),
     password: str = Form(default=""),
     phone: str = Form(default=""),
+    parent_phone: str = Form(default=""),
     employee_number: str = Form(default=""),
     job_role: str = Form(default="Employee"),
     dob: str = Form(default=""),
+    gender: str = Form(default=""),
+    joining_date: str = Form(default=""),
+    native: str = Form(default=""),
+    address: str = Form(default=""),
+    aadhar: str = Form(default=""),
+    pan_card: str = Form(default=""),
+    bank_details: str = Form(default=""),
     salary: str = Form(default=""),
-    email:  str = Form(default=""),
+    email: str = Form(default=""),
     db = Depends(get_db_connection)
 ):
     """Handle adding or editing employees (HR only)."""
@@ -470,9 +481,9 @@ async def manage_employee(
             
             cursor.execute(
                 """INSERT INTO employee_details 
-                   (name, email, password, phone, employee_number, job_role, dob)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (name, new_email, password , phone, employee_number, job_role, dob)
+                   (name, email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (name, new_email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary)
             )
             db.commit()
             
@@ -493,16 +504,16 @@ async def manage_employee(
             if password:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, email = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s, password = %s
+                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s, password = %s
                        WHERE email = %s""",
-                    (name, new_email, phone, employee_number, job_role, dob, password, email)
+                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, password, email)
                 )
             else:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, email = %s, phone = %s, employee_number = %s, job_role = %s, dob = %s
+                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s
                        WHERE email = %s""",
-                    (name, new_email, phone, employee_number, job_role, dob, email)
+                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, email)
                 )
             db.commit()
         

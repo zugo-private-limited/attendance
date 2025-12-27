@@ -130,7 +130,6 @@
                 </div>
             </div>
 
-            {% if is_hr %}
             <!-- Add/Edit Employee Modal (HR Only) -->
             <div id="employeeModal" class="modal hidden">
                 <div class="modal-content">
@@ -160,6 +159,11 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="parent_phone">Parent Phone</label>
+                            <input type="tel" id="parent_phone" name="parent_phone">
+                        </div>
+
+                        <div class="form-group">
                             <label for="employee_number">Employee ID</label>
                             <input type="text" id="employee_number" name="employee_number">
                         </div>
@@ -172,6 +176,46 @@
                         <div class="form-group">
                             <label for="dob">Date of Birth</label>
                             <input type="date" id="dob" name="dob">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="joining_date">Joining Date</label>
+                            <input type="date" id="joining_date" name="joining_date">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="native">Native Place</label>
+                            <input type="text" id="native" name="native">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="address">Present Address</label>
+                            <input type="text" id="address" name="address">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aadhar">Aadhar Number</label>
+                            <input type="text" id="aadhar" name="aadhar">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="pan">PAN Number</label>
+                            <input type="text" id="pan" name="pan_card">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bank_details">Bank Details</label>
+                            <input type="text" id="bank_details" name="bank_details" placeholder="Bank Name, A/C No, IFSC">
                         </div>
                         
                         <div class="form-group">
@@ -186,7 +230,6 @@
                     </form>
                 </div>
             </div>
-            {% endif %}
 
             <!-- Manual Attendance Modal (HR Only) -->
             {% if is_hr %}
@@ -267,6 +310,134 @@
             background-color: #2980b9;
         }
 
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-outline {
+            background-color: #ecf0f1;
+            color: #333;
+            border: 1px solid #bdc3c7;
+        }
+
+        .btn-outline:hover {
+            background-color: #d5dbdb;
+        }
+
+        .btn-purple {
+            background-color: #9b59b6;
+            color: white;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-purple:hover {
+            background-color: #8e44ad;
+        }
+
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+            display: none;
+        }
+
+        .modal:not(.hidden) {
+            display: block;
+        }
+
+        .modal.hidden {
+            display: none !important;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #221f1e;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .modal-actions button {
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+            transition: all 0.3s;
+        }
+
         select {
             width: 100%;
             padding: 8px;
@@ -328,7 +499,7 @@
             form.reset();
             document.getElementById('formAction').value = 'add';
             document.getElementById('editEmail').value = '';
-            document.getElementById('email').disabled = false;
+            document.getElementById('email').readOnly = false;  // Enable for adding new employee
             document.getElementById('password').required = true;
             document.getElementById('passwordLabel').textContent = '*';
             
@@ -340,9 +511,9 @@
             const title = document.getElementById('modalTitle');
             
             title.textContent = 'Edit Employee';
-            document.getElementById('editEmail').value = email;
+            document.getElementById('editEmail').value = email;  // Store original email in hidden field
             document.getElementById('formAction').value = 'edit';
-            document.getElementById('email').disabled = true;
+            document.getElementById('email').readOnly = true;  // Use readOnly instead of disabled so value is submitted
             document.getElementById('password').required = false;
             document.getElementById('passwordLabel').textContent = '(optional)';
             
@@ -353,9 +524,17 @@
                     document.getElementById('name').value = emp.name || '';
                     document.getElementById('email').value = emp.email || '';
                     document.getElementById('phone').value = emp.phone || '';
+                    document.getElementById('parent_phone').value = emp.parent_phone || '';
                     document.getElementById('employee_number').value = emp.employee_number || '';
                     document.getElementById('role').value = emp.job_role || 'Employee';
                     document.getElementById('dob').value = emp.dob || '';
+                    document.getElementById('gender').value = emp.gender || '';
+                    document.getElementById('joining_date').value = emp.joining_date || '';
+                    document.getElementById('native').value = emp.native || '';
+                    document.getElementById('address').value = emp.address || '';
+                    document.getElementById('aadhar').value = emp.aadhar || '';
+                    document.getElementById('pan').value = emp.pan_card || '';
+                    document.getElementById('bank_details').value = emp.bank_details || '';
                     document.getElementById('salary').value = emp.salary || '';
                     document.getElementById('password').value = '';
                 })
