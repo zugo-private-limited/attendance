@@ -69,7 +69,6 @@
                                 <th>Salary</th>
                                 <th>Bank details</th>
                                 {% endif %}
-                                <th>Present </th>
                                 {% if is_hr %}
                                 <th style="text-align: center;">Actions</th>
                                 {% endif %}
@@ -90,13 +89,6 @@
                                 <td>₹{{ employee.salary or 'Not Set' }}</td>
                                 <td>{{ employee.bank_details or 'Not Set' }}</td>
                                 {% endif %}
-                                <td>
-                                    {% if employee.present_today %}
-                                    <span class="status-badge present">Present</span>
-                                    {% else %}
-                                    <span class="status-badge absent">Absent</span>
-                                    {% endif %}
-                                </td>
                                 {% if is_hr %}
                                 <td style="text-align: center;">
                                     <button onclick="editEmployee('{{ employee.email }}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 3px;">Edit</button>
