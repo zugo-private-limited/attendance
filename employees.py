@@ -255,7 +255,7 @@ users = {
         "password": "Sarath@123",
         "name": "SARATH KUMAR J",
         "email": "sarathzugopvt@gmail.com ",
-        "photo": "Sarath.jpg",   
+        "photo": "sarath.jpg",   
         "joining_date": "02/12/2025",
         "employee_number": " ZPL014 ",
         "phone":" 6369416974 ",
