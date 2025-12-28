@@ -42,7 +42,7 @@ users = {
         "total_working": 0
     },
     "nandhakumarzugopvt@gmail.com": {
-        "password": "nandha123",
+        "password": "Nandhu@123",
         "name": "NANDHAKUMAR T",
         "email": "nandhakumar1152@gmail.com",
         "photo": "nandhu.jpg", 
@@ -84,7 +84,7 @@ users = {
         "total_working": 0
     },
      "nanthuzugopvt@gmail.com": {
-        "password": "nanthu@123",
+        "password": "Nanthu@123",
         "name": "NANTHAKUMAR K S",
         "email": "ksnandhakumarcgm@gmail.com",
         "photo": "Nanthu_ks.jpeg", 
@@ -126,7 +126,7 @@ users = {
         "total_working": 0
     },
      "bharathzugopvt@gmail.com": {
-        "password": "bharath@123",
+        "password": "Bharath@123",
         "name": "BHARATH RAJ .M",
         "email": "bharath24112001@gmail.com",
         "photo": "bharath.JPG", 
@@ -147,7 +147,7 @@ users = {
         "total_working": 0
     },
     "someshzugopvt@gmail.com": {
-        "password": "somesh@123",
+        "password": "Somesh@123",
         "name": "SOMESH KANNA",
         "email": "somsaf0411@gmail.com",
         "photo": "somesh.jpg", 
@@ -189,7 +189,7 @@ users = {
         "total_working": 0
     },
     "pavithramzugopvt@gmail.com": {
-        "password": "pavithra@123",
+        "password": "Pavithra@123",
         "name": "M. PAVITHRA",
         "email": "pavithra.m2007@gmail.com",
         "photo": "static/pavithra.jpeg",
@@ -210,7 +210,7 @@ users = {
         "total_working": 0
     },
     "afrinzugopvt@gmail.com": {
-        "password": "afrin@123",
+        "password": "Afrin@123",
         "name": "A. AFRIN MEKHANAS",
         "email": "afrinappas56@gmail.com",
         "photo": "static/afrin.jpeg",
@@ -231,7 +231,7 @@ users = {
         "total_working": 0
     },
     "blessitazugopvt@gmail.com": {
-        "password": " Blessita123 ",
+        "password": " Blessita@123 ",
        "name": " Blessita A",
         "email": " a.blessita@gmail.com",
         "photo": "static/blessita.jpeg ", 
@@ -271,5 +271,27 @@ users = {
         "salary": " 15000 ",
         "total_leave": 0,
         "total_working": 0  
+    },
+    "logeshzugopvt@gmail.com": { 
+        "password": "Lokesh@123",
+        "name": " Lokesh S ",   
+        "email": " logeshzugopvt@gmail.com", 
+        "photo": " ", 
+        "joining_date": " 09/12/25", 
+        "employee_number": "ZPL015 ",  
+        "phone":" 9123544798 ",    
+        "parent_phone": " 6381289422 ",  
+        "dob": " 08/09/2001",           
+        "gender": " male",   
+        "job_role": " video editor ",    
+        "native": " Tiruchirappalli ",     
+        "address": " NO 15 agraharam, varaganeri, Tiruchirappalli, tamil nadu , 620008",    
+        "aadhar": " 805329165023",      
+        "pan_card": " NCQPS7662B ",  
+        "bank_details": "AC NO:9186719490 , IFSC:SBIN0070759,NAME;LOKESH S,BANK NAME : State bank of india,BRANCH :PALAKARAI( TIRUCHIRAPALLI) ",
+        "salary": " 25000 ",
+        "total_leave": 0,
+        "total_working": 0
     }
 }
+                                           
