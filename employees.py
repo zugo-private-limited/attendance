@@ -231,13 +231,8 @@ users = {
         "total_working": 0
     },
     "blessitazugopvt@gmail.com": {
-<<<<<<< HEAD
         "password": " Blessita@123 ",
-       "name": " Blessita A",
-=======
-        "password": " blessita@123 ",
-       "name": " BLESSITA A",
->>>>>>> 6d1e0f560c57224073f73e42218ced0822d7c4a3
+        "name": " Blessita A",
         "email": " a.blessita@gmail.com",
         "photo": "static/blessita.jpeg ", 
         "joining_date": " 10-12-2025 ",
@@ -279,7 +274,7 @@ users = {
     },
     "logeshzugopvt@gmail.com": { 
         "password": "Lokesh@123",
-        "name": " Lokesh S ",   
+        "name": " LOKESH S ",   
         "email": " logeshzugopvt@gmail.com", 
         "photo": "static/logesh.jpeg", 
         "joining_date": " 09/12/25", 
@@ -287,8 +282,8 @@ users = {
         "phone":" 9123544798 ",    
         "parent_phone": " 6381289422 ",  
         "dob": " 08/09/2001",           
-        "gender": " male",   
-        "job_role": " video editor ",    
+        "gender": " Male",   
+        "job_role": " Video Editor ",    
         "native": " Tiruchirappalli ",     
         "address": " NO 15 agraharam, varaganeri, Tiruchirappalli, tamil nadu , 620008",    
         "aadhar": " 805329165023",      
