@@ -20,7 +20,7 @@ users = {
         "total_leave": 0,  
         "total_working": 0 
     },
-    "zugopvtnetwork@gmail.com": { # HR Account - Sindhu G
+    "zugopvtnetwork@gmail.com": { # HR Account 
         "password": "zugo@123",
         "name": "SINDHU G",
         "email": "",
@@ -189,10 +189,10 @@ users = {
         "total_working": 0
     },
     "pavithramzugopvt@gmail.com": {
-        "password": "Pavithra@123",
+        "password": "pavithra@123",
         "name": "M. PAVITHRA",
         "email": "pavithra.m2007@gmail.com",
-        "photo": "static/pavithra.jpeg",
+        "photo": "pavithra.jpeg",
         "joining_date": "01/09/2025",
         "employee_number": "ZPL013",
         "phone": "7904928403",
@@ -213,7 +213,7 @@ users = {
         "password": "Afrin@123",
         "name": "A. AFRIN MEKHANAS",
         "email": "afrinappas56@gmail.com",
-        "photo": "static/afrin.jpeg",
+        "photo": "afrin.jpeg",
         "joining_date": "03/11/2025",
         "employee_number": "ZPL011",
         "phone": "9345164496",
@@ -231,10 +231,10 @@ users = {
         "total_working": 0
     },
     "blessitazugopvt@gmail.com": {
-        "password": " Blessita@123 ",
+        "password": "Blessita@123",
         "name": " Blessita A",
         "email": " a.blessita@gmail.com",
-        "photo": "static/blessita.jpeg ", 
+        "photo": "blessita.jpeg", 
         "joining_date": " 10-12-2025 ",
         "employee_number": "ZPL017 ",
         "phone":" 9894307598 ",
@@ -255,7 +255,7 @@ users = {
         "password": "Sarath@123",
         "name": "SARATH KUMAR J",
         "email": "sarathzugopvt@gmail.com ",
-        "photo": "static/Sarath.jpg",   
+        "photo": "Sarath.jpg",   
         "joining_date": "02/12/2025",
         "employee_number": " ZPL014 ",
         "phone":" 6369416974 ",
@@ -276,7 +276,7 @@ users = {
         "password": "Lokesh@123",
         "name": " LOKESH S ",   
         "email": " logeshzugopvt@gmail.com", 
-        "photo": "static/logesh.jpeg", 
+        "photo": "logesh.jpeg", 
         "joining_date": " 09/12/25", 
         "employee_number": "ZPL015 ",  
         "phone":" 9123544798 ",    
