@@ -276,7 +276,7 @@ users = {
         "password": "Lokesh@123",
         "name": " Lokesh S ",   
         "email": " logeshzugopvt@gmail.com", 
-        "photo": " ", 
+        "photo": "static/logesh.jpeg", 
         "joining_date": " 09/12/25", 
         "employee_number": "ZPL015 ",  
         "phone":" 9123544798 ",    
