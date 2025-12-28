@@ -231,8 +231,13 @@ users = {
         "total_working": 0
     },
     "blessitazugopvt@gmail.com": {
+<<<<<<< HEAD
         "password": " Blessita@123 ",
        "name": " Blessita A",
+=======
+        "password": " blessita@123 ",
+       "name": " BLESSITA A",
+>>>>>>> 6d1e0f560c57224073f73e42218ced0822d7c4a3
         "email": " a.blessita@gmail.com",
         "photo": "static/blessita.jpeg ", 
         "joining_date": " 10-12-2025 ",

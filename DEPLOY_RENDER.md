@@ -76,8 +76,7 @@
    
    ```
    DB_NAME=zugo_attendance
-   DB_USER=zugoweb
-   DB_PASSWORD=<from database connection string>
+   DB_USER=zugoweb  
    DB_HOST=<from database connection string>
    DB_PORT=5432
    SESSION_SECRET_KEY=<generate random string>
