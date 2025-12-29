@@ -2,12 +2,13 @@ import os
 import uvicorn
 import csv
 import io
+import uuid
 import psycopg2
 import psycopg2.extras
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 
-from fastapi import FastAPI, Request, Form, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -456,6 +457,7 @@ async def manage_employee(
     bank_details: str = Form(default=""),
     salary: str = Form(default=""),
     email: str = Form(default=""),
+    photo: UploadFile = File(None),
     db = Depends(get_db_connection)
 ):
     """Handle adding or editing employees (HR only)."""
@@ -465,6 +467,30 @@ async def manage_employee(
     
     try:
         cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Handle photo upload
+        photo_filename = None
+        if photo and photo.filename:
+            # Validate file
+            allowed_extensions = {'jpg', 'jpeg', 'png', 'gif'}
+            file_ext = photo.filename.rsplit('.', 1)[1].lower() if '.' in photo.filename else ''
+            
+            if file_ext not in allowed_extensions:
+                return RedirectResponse(url="/hr-management?error=Invalid+photo+format", status_code=status.HTTP_303_SEE_OTHER)
+            
+            # Generate unique filename
+            unique_id = str(uuid.uuid4())[:8]
+            photo_filename = f"employee_{unique_id}_{name.replace(' ', '_')}.{file_ext}"
+            photo_path = os.path.join(STATIC_DIR, photo_filename)
+            
+            # Save file
+            try:
+                contents = await photo.read()
+                with open(photo_path, 'wb') as f:
+                    f.write(contents)
+            except Exception as e:
+                print(f"Error saving photo: {e}")
+                return RedirectResponse(url="/hr-management?error=Error+uploading+photo", status_code=status.HTTP_303_SEE_OTHER)
         
         if action == "add":
             # Check for duplicate email
@@ -479,11 +505,14 @@ async def manage_employee(
                 cursor.close()
                 return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)
             
+            # Use provided photo or default
+            final_photo = photo_filename if photo_filename else "profile.jpg"
+            
             cursor.execute(
                 """INSERT INTO employee_details 
-                   (name, email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (name, new_email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary)
+                   (name, email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, photo)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (name, new_email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, final_photo)
             )
             db.commit()
             
@@ -501,19 +530,25 @@ async def manage_employee(
                 cursor.close()
                 return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)
             
+            # Get current photo if not updating
+            if not photo_filename:
+                cursor.execute("SELECT photo FROM employee_details WHERE email = %s", (email,))
+                result = cursor.fetchone()
+                photo_filename = result.get('photo') if result else 'profile.jpg'
+            
             if password:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s, password = %s
+                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s, password = %s, photo = %s
                        WHERE email = %s""",
-                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, password, email)
+                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, password, photo_filename, email)
                 )
             else:
                 cursor.execute(
                     """UPDATE employee_details 
-                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s
+                       SET name = %s, email = %s, phone = %s, parent_phone = %s, employee_number = %s, job_role = %s, dob = %s, gender = %s, joining_date = %s, native = %s, address = %s, aadhar = %s, pan_card = %s, bank_details = %s, salary = %s, photo = %s
                        WHERE email = %s""",
-                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, email)
+                    (name, new_email, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, photo_filename, email)
                 )
             db.commit()
         

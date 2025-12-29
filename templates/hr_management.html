@@ -134,7 +134,7 @@
             <div id="employeeModal" class="modal hidden">
                 <div class="modal-content">
                     <h3 id="modalTitle">Add New Employee</h3>
-                    <form id="employeeForm" method="POST" action="{{ url_for('manage_employee') }}">
+                    <form id="employeeForm" method="POST" action="{{ url_for('manage_employee') }}" enctype="multipart/form-data">
                         <input type="hidden" name="action" id="formAction" value="add">
                         <input type="hidden" name="email" id="editEmail">
                         
@@ -221,6 +221,15 @@
                         <div class="form-group">
                             <label for="salary">Salary</label>
                             <input type="text" id="salary" name="salary">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="photo">Employee Photo</label>
+                            <input type="file" id="photo" name="photo" accept="image/*">
+                            <small style="color: #7f8c8d; display: block; margin-top: 5px;">Supported formats: JPG, PNG, GIF (Max 5MB)</small>
+                            <div id="photoPreview" style="margin-top: 10px; display: none;">
+                                <img id="photoImg" style="max-width: 150px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
+                            </div>
                         </div>
                         
                         <div class="modal-actions">
@@ -564,8 +573,48 @@
             form.submit();
         }
 
+        // Photo preview functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const photoInput = document.getElementById('photo');
+            if (photoInput) {
+                photoInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Validate file size (5MB max)
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        if (file.size > maxSize) {
+                            alert('File size exceeds 5MB limit. Please choose a smaller file.');
+                            this.value = '';
+                            document.getElementById('photoPreview').style.display = 'none';
+                            return;
+                        }
+
+                        // Validate file type
+                        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                        if (!validTypes.includes(file.type)) {
+                            alert('Invalid file type. Please upload JPG, PNG, or GIF.');
+                            this.value = '';
+                            document.getElementById('photoPreview').style.display = 'none';
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const img = document.getElementById('photoImg');
+                            img.src = event.target.result;
+                            document.getElementById('photoPreview').style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
+
         function closeModal() {
             document.getElementById('employeeModal').classList.add('hidden');
+            // Clear photo preview when closing modal
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('photo').value = '';
         }
 
         function openManualAttendanceModal() {

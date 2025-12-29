@@ -19,6 +19,8 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
 # Office Location for Attendance
 OFFICE_LAT = 11.1205343
+
+
 OFFICE_LON = 77.3372932
 OFFICE_RADIUS_METERS = 1000
 
