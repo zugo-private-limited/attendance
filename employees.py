@@ -62,7 +62,7 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    "zugoprivitelimited.hr@gmail.com": {
+    "zugoprivatelimited.hr@gmail.com": {
         "password": "Sindhu@123",
         "name": "SINDHU G",
         "email": "sindhugnanasekaran609@gmail.com",
