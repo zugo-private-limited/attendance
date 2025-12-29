@@ -230,27 +230,6 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    "sarathzugopvt@gmail.com": {
-        "password": "Sarath@123",
-        "name": "SARATH KUMAR J",
-        "email": "sarathzugopvt@gmail.com ",
-        "photo": "sarath.jpg",   
-        "joining_date": "02/12/2025",
-        "employee_number": " ZPL014 ",
-        "phone":" 6369416974 ",
-        "parent_phone": " 8667702580 ",
-        "dob": " 09/07/2002 ",
-        "gender": " Male ",
-        "job_role": " Social Media Manager ",   
-        "native": " Tiruppur ",
-        "address": " D/N0- 86 Bharathi Nagar Chandrapuram East Tirupur 641604 ",
-        "aadhar": " 606426886637 ", 
-        "pan_card": " OXOPS5888D ",
-        "bank_details": " Kotak Mahindra Bank , A/C No: 9146615611 , IFSC Code: KKBK0008805 ",
-        "salary": " 15000 ",
-        "total_leave": 0,
-        "total_working": 0  
-    },
     "logeshzugopvt@gmail.com": { 
         "password": "Lokesh@123",
         "name": " LOKESH S ",   
@@ -292,6 +271,28 @@ users = {
         "salary": "17,000",
         "total_leave": 0,
         "total_working": 0
+ 
+    },
+    "sarathzugopvt@gmail.com": {
+        "password": "Sarath@123",
+        "name": "SARATH KUMAR J",
+        "email": "sarathzugopvt@gmail.com ",
+        "photo": "sarath.jpg",   
+        "joining_date": "02/12/2025",
+        "employee_number": " ZPL014 ",
+        "phone":" 6369416974 ",
+        "parent_phone": " 8667702580 ",
+        "dob": " 09/07/2002 ",
+        "gender": " Male ",
+        "job_role": " Social Media Manager ",   
+        "native": " Tiruppur ",
+        "address": " D/N0- 86 Bharathi Nagar Chandrapuram East Tirupur 641604 ",
+        "aadhar": " 606426886637 ", 
+        "pan_card": " OXOPS5888D ",
+        "bank_details": " Kotak Mahindra Bank , A/C No: 9146615611 , IFSC Code: KKBK0008805 ",
+        "salary": " 15000 ",
+        "total_leave": 0,
+        "total_working": 0  
     }
 }
                                            
