@@ -211,7 +211,7 @@ users = {
     },
     "blessitazugopvt@gmail.com": {
         "password": "Blessita@123",
-        "name": " Blessita A",
+        "name": "BLESSITA A",
         "email": " a.blessita@gmail.com",
         "photo": "blessita.jpeg", 
         "joining_date": " 10-12-2025 ",
