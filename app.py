@@ -31,7 +31,7 @@ from schema import initialize_database_schema
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Application startup...")
+    print("Application startup...") 
     initialize_database_schema()
     yield
     print("Application shutdown...")

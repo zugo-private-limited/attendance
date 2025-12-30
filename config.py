@@ -18,11 +18,9 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
 
 # Office Location for Attendance
-OFFICE_LAT = 11.1205343
-
-
+OFFICE_LAT = 11.120529
 OFFICE_LON = 77.3372932
-OFFICE_RADIUS_METERS = 1000
+OFFICE_RADIUS_METERS = 500
 
 # Attendance Time Constraints (HH:MM format)
 CHECKIN_MORNING_START = time(9, 00)    # 09:10 AM
@@ -41,9 +39,9 @@ MD_EMAIL = os.getenv("MD_EMAIL", "zugoprivitelimited@gmail.com")
 
 
 # --- LOCATION CONFIGURATION ---
-OFFICE_LAT = 11.120529  # your office's latitude
-OFFICE_LON = 77.3398681 # your office's longitude
-OFFICE_RADIUS_METERS = 100  # 100 meters radius for location validation
+# OFFICE_LAT = 11.120529  # your office's latitude
+# OFFICE_LON = 77.3398681 # your office's longitude
+# OFFICE_RADIUS_METERS = 100  # 100 meters radius for location validation
 
 # Scheduler Settings
 LEAVE_MARKING_HOUR = 20  # 8 PM UTC
