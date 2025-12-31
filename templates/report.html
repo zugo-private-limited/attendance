@@ -90,6 +90,19 @@
             const lat = form.querySelector('[name="latitude"]').value;
             const lon = form.querySelector('[name="longitude"]').value;
             
+            // Get user's timezone offset in minutes (e.g., IST is UTC+5:30 = 330 minutes)
+            const timezoneOffset = new Date().getTimezoneOffset() * -1; // Negate because getTimezoneOffset returns negative for east
+            
+            // Create hidden timezone input if it doesn't exist
+            let tzInput = form.querySelector('[name="timezone_offset"]');
+            if (!tzInput) {
+                tzInput = document.createElement('input');
+                tzInput.type = 'hidden';
+                tzInput.name = 'timezone_offset';
+                form.appendChild(tzInput);
+            }
+            tzInput.value = timezoneOffset;
+            
             // Add comment if present
             const commentBox = document.getElementById('checkin_comment');
             if (commentBox && commentBox.value.trim()) {
@@ -226,12 +239,14 @@
                             <input type="hidden" name="action" value="check-in">
                             <input type="hidden" id="latitude_checkin" name="latitude">
                             <input type="hidden" id="longitude_checkin" name="longitude">
+                            <input type="hidden" name="timezone_offset" value="0">
                             <button type="submit" class="checkin-btn">✅ Check-In</button>
                         </form>
                         <form method="POST" action="/attendance" onsubmit="return setLocationAndSubmit(this)" style="flex: 1; text-align: right;">
                             <input type="hidden" name="action" value="check-out">
                             <input type="hidden" id="latitude_checkout" name="latitude">
                             <input type="hidden" id="longitude_checkout" name="longitude">
+                            <input type="hidden" name="timezone_offset" value="0">
                             <button type="submit" class="checkout-btn">🚪 Check-Out</button>
                         </form>
                     </div>
