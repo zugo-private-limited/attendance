@@ -9,40 +9,82 @@
     <link rel="stylesheet" href="{{ url_for('static', path='mobile.css') }}">
     
     <script>
-        // Function to get current location
+        // Store location globally for debugging
+        let cachedLocation = null;
+        let locationAttempts = 0;
+        const MAX_LOCATION_ATTEMPTS = 3;
+
+        // Function to get current location with retry logic
         function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
-            } else {
-                alert("Geolocation is not supported by this browser.");
+            if (!navigator.geolocation) {
+                console.warn("⚠️ Geolocation not supported by this browser");
+                return;
             }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,           // 10 seconds
+                maximumAge: 0             // Don't use cached location
+            };
+
+            locationAttempts++;
+            navigator.geolocation.getCurrentPosition(
+                showPosition, 
+                showError, 
+                options
+            );
         }
 
         function showPosition(position) {
-            document.getElementById("latitude_checkin").value = position.coords.latitude;
-            document.getElementById("longitude_checkin").value = position.coords.longitude;
-            document.getElementById("latitude_checkout").value = position.coords.latitude;
-            document.getElementById("longitude_checkout").value = position.coords.longitude;
+            cachedLocation = position.coords;
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            // Update all latitude/longitude inputs
+            const latInputs = document.querySelectorAll('[name="latitude"]');
+            const lonInputs = document.querySelectorAll('[name="longitude"]');
+            
+            latInputs.forEach(input => input.value = lat);
+            lonInputs.forEach(input => input.value = lon);
+            
+            console.log(`✓ Location acquired: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
         }
 
         function showError(error) {
+            let errorMsg = "";
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    alert("User denied the request for Geolocation.  Cannot track attendance.");
+                    errorMsg = "Location permission denied. Please enable location in browser settings.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    alert("Location information is unavailable.");
+                    errorMsg = "Location information is unavailable. Retrying...";
+                    if (locationAttempts < MAX_LOCATION_ATTEMPTS) {
+                        setTimeout(getLocation, 2000);
+                    }
                     break;
                 case error.TIMEOUT:
-                    alert("The request to get user location timed out.");
+                    errorMsg = "Location request timed out. Retrying...";
+                    if (locationAttempts < MAX_LOCATION_ATTEMPTS) {
+                        setTimeout(getLocation, 2000);
+                    }
                     break;
                 case error.UNKNOWN_ERROR:
-                    alert("An unknown error occurred.");
+                    errorMsg = "Unknown error occurred. Please refresh and try again.";
                     break;
             }
+            console.warn(`⚠️ Geolocation error: ${errorMsg}`);
         }
 
-        window.onload = getLocation;
+        // Request location on page load with retry
+        window.addEventListener('load', function() {
+            getLocation();
+            // Retry after 2 seconds if location not obtained
+            setTimeout(() => {
+                if (!cachedLocation && locationAttempts < MAX_LOCATION_ATTEMPTS) {
+                    getLocation();
+                }
+            }, 2000);
+        });
 
         function setLocationAndSubmit(form) {
             const lat = form.querySelector('[name="latitude"]').value;
@@ -60,13 +102,39 @@
             
             if (!lat || !lon) {
                 if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        form.querySelector('[name="latitude"]').value = position.coords.latitude;
-                        form.querySelector('[name="longitude"]').value = position.coords.longitude;
-                        form.submit();
-                    }, function(error) {
-                        alert("Location not detected. Please enable location services and reload.");
-                    });
+                    // Show loading state
+                    const btn = form.querySelector('button[type="submit"]');
+                    const originalText = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = "📍 Getting location...";
+
+                    const options = {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    };
+
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            form.querySelector('[name="latitude"]').value = position.coords.latitude;
+                            form.querySelector('[name="longitude"]').value = position.coords.longitude;
+                            form.submit();
+                        }, 
+                        function(error) {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                            let msg = "Location error: ";
+                            if (error.code === error.PERMISSION_DENIED) {
+                                msg += "Please enable location services in your browser settings.";
+                            } else if (error.code === error.TIMEOUT) {
+                                msg += "Location request timed out. Check your GPS/network.";
+                            } else {
+                                msg += "Could not determine your location. Please try again.";
+                            }
+                            alert(msg);
+                        },
+                        options
+                    );
                 } else {
                     alert("Geolocation is not supported by this browser.");
                 }

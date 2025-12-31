@@ -192,7 +192,11 @@ def initialize_database_schema():
                 conn.commit()
                 print(f"Inserted default HR account: {config.HR_EMAIL}")
             else:
-                print(f"HR account already exists: {config.HR_EMAIL}")
+                print(f"✓ HR account already exists: {config.HR_EMAIL}")
+            cursor2.close()
+        except psycopg2.IntegrityError as _e:
+            conn.rollback()
+            print(f"✓ HR account already exists (duplicate): {config.HR_EMAIL}")
             cursor2.close()
         except Exception as _e:
             print(f"Warning: could not ensure HR account exists: {_e}")
@@ -223,17 +227,28 @@ def initialize_database_schema():
                 address = user_data.get("address")
                 job_role = user_data.get("job_role", "Employee")
                 
-                cursor3.execute(
-                    """INSERT INTO employee_details 
-                       (name, email, password, photo, phone, parent_phone, dob, gender, 
-                        employee_number, aadhar, joining_date, native, address, job_role)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (name, email, password, photo, phone, parent_phone, dob, gender,
-                     employee_number, aadhar, joining_date, native, address, job_role)
-                )
-            conn.commit()
+                try:
+                    cursor3.execute(
+                        """INSERT INTO employee_details 
+                           (name, email, password, photo, phone, parent_phone, dob, gender, 
+                            employee_number, aadhar, joining_date, native, address, job_role)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (name, email, password, photo, phone, parent_phone, dob, gender,
+                         employee_number, aadhar, joining_date, native, address, job_role)
+                    )
+                    conn.commit()
+                except psycopg2.IntegrityError as ie:
+                    conn.rollback()
+                    # Check if it's a duplicate email or employee_number
+                    if "email" in str(ie):
+                        pass  # Email already exists, skip
+                    elif "employee_number" in str(ie):
+                        # Update existing employee if only employee_number conflicts
+                        pass  # Skip this one
+                    else:
+                        print(f"  Warning: Could not insert {email}: {ie}")
             cursor3.close()
-            print("Employee data seeding complete.")
+            print("✓ Employee data seeding complete.")
         except Exception as _e:
             print(f"Warning: could not seed employee data: {_e}")
 
