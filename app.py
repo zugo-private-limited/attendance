@@ -216,7 +216,6 @@ async def handle_attendance(
     latitude: float = Form(...),
     longitude: float = Form(...),
     comment: str = Form(None),
-    timezone_offset: int = Form(default=0),
     db = Depends(get_db_connection)
 ):
     """Processes check-in and check-out requests."""
@@ -236,9 +235,7 @@ async def handle_attendance(
             status_code=status.HTTP_303_SEE_OTHER
         )
 
-    # Get current UTC time and apply timezone offset (in minutes)
-    now = datetime.utcnow()
-    now = now + timedelta(minutes=timezone_offset)
+    now = datetime.now()
     current_time = now.time()
     today = now.date()
     
@@ -256,11 +253,11 @@ async def handle_attendance(
 
     if action == "check-in":
         is_morning = config.CHECKIN_MORNING_START <= current_time <= config.CHECKIN_MORNING_END
-        is_afternoon = config.CHECKIN_AFTERNOON_START <= current_time <= config.CHECKIN_AFTERNOON_END
+        is_afternoon = current_time == config.CHECKIN_AFTERNOON_EXACT
 
         if not (is_morning or is_afternoon):
             return RedirectResponse(
-                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+between+{config.CHECKIN_AFTERNOON_START}+and+{config.CHECKIN_AFTERNOON_END}",
+                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+at+{config.CHECKIN_AFTERNOON_EXACT}",
                 status_code=status.HTTP_303_SEE_OTHER
             )
 
