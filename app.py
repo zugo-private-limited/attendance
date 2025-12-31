@@ -256,11 +256,11 @@ async def handle_attendance(
 
     if action == "check-in":
         is_morning = config.CHECKIN_MORNING_START <= current_time <= config.CHECKIN_MORNING_END
-        is_afternoon = current_time == config.CHECKIN_AFTERNOON_EXACT
+        is_afternoon = config.CHECKIN_AFTERNOON_START <= current_time <= config.CHECKIN_AFTERNOON_END
 
         if not (is_morning or is_afternoon):
             return RedirectResponse(
-                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+at+{config.CHECKIN_AFTERNOON_EXACT}",
+                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+between+{config.CHECKIN_AFTERNOON_START}+and+{config.CHECKIN_AFTERNOON_END}",
                 status_code=status.HTTP_303_SEE_OTHER
             )
 

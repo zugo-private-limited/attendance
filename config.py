@@ -23,10 +23,11 @@ OFFICE_LON = 77.3399277
 OFFICE_RADIUS_METERS = 500  # 0.5 km radius
 
 # Attendance Time Constraints (HH:MM format)
-CHECKIN_MORNING_START = time(9, 00)    # 09:10 AM
-CHECKIN_MORNING_END = time(14, 00)     # 09:45 PM
-CHECKIN_AFTERNOON_EXACT = time(13, 30) # 01:30 PM
-CHECKOUT_MIN_TIME = time(19, 15)       # 07:15 PM
+CHECKIN_MORNING_START = time(9, 00)    # 9:00 AM
+CHECKIN_MORNING_END = time(14, 00)     # 2:00 PM
+CHECKIN_AFTERNOON_START = time(13, 30) # 1:30 PM
+CHECKIN_AFTERNOON_END = time(14, 15)   # 2:15 PM
+CHECKOUT_MIN_TIME = time(19, 15)       # 7:15 PM
 
 # Email Configuration
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")

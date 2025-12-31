@@ -14,7 +14,7 @@ from datetime import datetime, date, timedelta
 
 from config import (
     OFFICE_LAT, OFFICE_LON, OFFICE_RADIUS_METERS,
-    CHECKIN_MORNING_START, CHECKIN_MORNING_END, CHECKIN_AFTERNOON_EXACT,
+    CHECKIN_MORNING_START, CHECKIN_MORNING_END, CHECKIN_AFTERNOON_START, CHECKIN_AFTERNOON_END,
     CHECKOUT_MIN_TIME,
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, HR_EMAIL, MD_EMAIL,
     ATTENDANCE_PERIOD_START_DAY, ATTENDANCE_PERIOD_END_DAY
@@ -39,14 +39,6 @@ def is_at_office(lat: float, lon: float) -> bool:
         return R * c
     return haversine(lat, lon, config.OFFICE_LAT, config.OFFICE_LON) <= config.OFFICE_RADIUS_METERS
 
-
-def is_checkin_allowed(current_time: datetime.time) -> bool:
-    """Checks if the current time is within allowed check-in windows."""
-    # Check for morning window
-    morning_allowed = (CHECKIN_MORNING_START <= current_time <= CHECKIN_MORNING_END)
-    # Check for afternoon exact time
-    afternoon_allowed = (current_time == CHECKIN_AFTERNOON_EXACT)
-    return morning_allowed or afternoon_allowed
 
 def is_checkout_allowed(current_time: datetime.time) -> bool:
     """Checks if the current time is after the minimum allowed check-out time."""
