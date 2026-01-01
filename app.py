@@ -253,11 +253,11 @@ async def handle_attendance(
 
     if action == "check-in":
         is_morning = config.CHECKIN_MORNING_START <= current_time <= config.CHECKIN_MORNING_END
-        is_afternoon = current_time == config.CHECKIN_AFTERNOON_EXACT
+        is_afternoon = config.CHECKIN_AFTERNOON_START <= current_time <= config.CHECKIN_AFTERNOON_END
 
         if not (is_morning or is_afternoon):
             return RedirectResponse(
-                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+at+{config.CHECKIN_AFTERNOON_EXACT}",
+                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+between+{config.CHECKIN_AFTERNOON_START}+and+{config.CHECKIN_AFTERNOON_END}",
                 status_code=status.HTTP_303_SEE_OTHER
             )
 
@@ -630,6 +630,16 @@ async def manual_attendance(
                VALUES (%s, %s, %s, %s, %s, %s)""",
             (employee_email, action, event_datetime, None, None, "Manual Entry by HR")
         )
+        
+        # If check-in, increment total_working days
+        if action == "check-in":
+            cursor.execute(
+                """UPDATE employee_details 
+                   SET total_working = total_working + 1 
+                   WHERE email = %s""",
+                (employee_email,)
+            )
+        
         db.commit()
         cursor.close()
         
