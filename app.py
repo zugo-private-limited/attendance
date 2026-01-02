@@ -8,6 +8,7 @@ import psycopg2.extras
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta, timezone, time
 import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -23,7 +24,7 @@ from data import (
     submit_employee_comment, get_employee_comments, get_unread_comments_for_hr, 
     get_all_comments_for_hr, mark_comment_as_read, get_unread_comment_count
 )
-from services import calculate_working_days_and_leaves_for_employee, is_at_office
+from services import calculate_working_days_and_leaves_for_employee, is_at_office, mark_leaves_for_absent_employees
 from schema import initialize_database_schema 
 
 # ===========================================================================
@@ -47,8 +48,26 @@ def get_ist_date():
 async def lifespan(app: FastAPI):
     print("Application startup...") 
     initialize_database_schema()
+    
+    # Initialize APScheduler for daily absence marking
+    scheduler = BackgroundScheduler()
+    
+    # Schedule job to run every day at 8 PM IST (which is 2:30 PM UTC, but we'll use a simpler hour)
+    # The job will check for employees who haven't clocked in for 3+ days
+    scheduler.add_job(mark_leaves_for_absent_employees, 'cron', hour=14, minute=30, timezone='Asia/Kolkata')
+    
+    try:
+        scheduler.start()
+        print("✓ Scheduler started - Absence marking enabled")
+    except Exception as e:
+        print(f"⚠️ Scheduler initialization failed: {e}")
+    
     yield
+    
     print("Application shutdown...")
+    if scheduler.running:
+        scheduler.shutdown()
+
 
 # Set absolute paths for Render compatibility
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

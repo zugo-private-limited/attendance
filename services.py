@@ -111,28 +111,53 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
 
 def mark_leaves_for_absent_employees():
     """
-    Marks 1 leave for employees who have not checked in today.
+    Marks employees as absent after 3 consecutive days without check-in.
     Runs daily.
     """
+    import config
+    from data import fetch_all_employees, update_employee_leave, fetch_attendance_for_period
+    
     # Use IST date
     today = datetime.now(IST).date()
-    employees = fetch_all_employees()
     
-    for employee in employees:
-        user_email = employee["email"]
-        if user_email == HR_EMAIL: # Skip HR account
-            continue
+    # Create DB connection for fetch_all_employees
+    conn = psycopg2.connect(
+        host=config.DB_HOST,
+        port=config.DB_PORT,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+        database=config.DB_NAME
+    )
+    
+    try:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT * FROM employee_details WHERE email != %s", (HR_EMAIL,))
+        employees = cursor.fetchall()
+        cursor.close()
+        
+        for employee in employees:
+            user_email = employee["email"]
+            if user_email == HR_EMAIL: # Skip HR account
+                continue
 
-        # Check for check-in today
-        todays_attendance = fetch_attendance_for_period(user_email, today, today)
-        checked_in_today = any(r["action"] == "check-in" for r in todays_attendance)
+            # Check last 3 days for any check-in
+            three_days_ago = today - timedelta(days=3)
+            last_three_days_attendance = fetch_attendance_for_period(user_email, three_days_ago, today)
+            has_checked_in_last_three_days = any(r["action"] == "check-in" for r in last_three_days_attendance)
 
-        if not checked_in_today:
-            current_leave = employee.get("total_leave", 0)
-            update_employee_leave(user_email, current_leave + 1)
-            print(f"Marked 1 leave for {user_email} on {today.strftime('%Y-%m-%d')}")
-        else:
-            print(f"{user_email} checked in today. No leave marked.")
+            if not has_checked_in_last_three_days:
+                # Employee hasn't checked in for 3+ days - mark as absent
+                current_leave = employee.get("total_leave", 0)
+                update_employee_leave(user_email, current_leave + 1)
+                print(f"⚠️ Marked ABSENT for {user_email} - No check-in for 3+ days")
+            else:
+                checked_in_today = any(r["action"] == "check-in" for r in last_three_days_attendance if r["event_time"].date() == today)
+                if checked_in_today:
+                    print(f"✓ {user_email} checked in today - Status: Present")
+                else:
+                    print(f"→ {user_email} has no check-in today, but checked in within last 3 days")
+    finally:
+        conn.close()
 
 
 def send_monthly_report_email_task() -> None:
