@@ -6,7 +6,8 @@ import uuid
 import psycopg2
 import psycopg2.extras
 from contextlib import asynccontextmanager
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone, time
+import pytz
 
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -24,6 +25,19 @@ from data import (
 )
 from services import calculate_working_days_and_leaves_for_employee, is_at_office
 from schema import initialize_database_schema 
+
+# ===========================================================================
+# TIMEZONE CONFIGURATION
+# ===========================================================================
+IST = pytz.timezone('Asia/Kolkata')  # India Standard Time
+
+def get_ist_now():
+    """Get current time in IST (Asia/Kolkata)."""
+    return datetime.now(IST)
+
+def get_ist_date():
+    """Get current date in IST."""
+    return get_ist_now().date() 
 
 # ===========================================================================
 # FastAPI APP INITIALIZATION
@@ -131,7 +145,7 @@ async def signup(
 
 
 @app.get("/report", response_class=HTMLResponse, name="report", summary="Display employee attendance")
-async def report(request: Request, db = Depends(get_db_connection)):
+async def report(request: Request, period: str = "30", db = Depends(get_db_connection)):
     """Shows the main dashboard for a logged-in employee."""
     user_email = request.session.get("user_email")
     if not user_email:
@@ -148,7 +162,11 @@ async def report(request: Request, db = Depends(get_db_connection)):
     records = fetch_attendance_for_today(db, user_email)
     sorted_records = sorted(records, key=lambda x:  x["event_time"], reverse=True)
 
-    report_data, total_seconds = _build_report_for_user(db, user_email, days=30)
+    # Map period parameter to days
+    period_map = {"30": 30, "180": 180, "365": 365}
+    days = period_map.get(period, 30)
+    
+    report_data, total_seconds = _build_report_for_user(db, user_email, days=days)
     total_hours = total_seconds / 3600 if total_seconds else 0
 
     is_hr = user_email == config.HR_EMAIL
@@ -161,28 +179,41 @@ async def report(request: Request, db = Depends(get_db_connection)):
         "total_working_hours": f"{total_hours:.2f}",
         "error": request.query_params.get("error"),
         "success": request.query_params.get("success"),
-        "is_hr": is_hr
+        "is_hr": is_hr,
+        "period": period
     })
 
 @app.get("/download_report", summary="Download attendance report as CSV")
-async def download_report(request: Request, db = Depends(get_db_connection)):
-    """Return a CSV file of the user's attendance report (last 30 days)."""
+async def download_report(request: Request, period: str = "30", db = Depends(get_db_connection)):
+    """Return a CSV file of the user's attendance report."""
     user_email = request.session.get("user_email")
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
-    report_data, _ = _build_report_for_user(db, user_email, days=30)
+    # Map period parameter to days
+    period_map = {"30": 30, "180": 180, "365": 365}
+    days = period_map.get(period, 30)
+    
+    report_data, _ = _build_report_for_user(db, user_email, days=days)
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Day", "Check In", "Check Out", "Total Hours"])
+    writer.writerow(["Date", "Check In", "Check Out", "Total Hours Worked"])
     for row in report_data:
         writer.writerow([row.get("day"), row.get("check_in"), row.get("check_out"), row.get("total_hours")])
 
     csv_content = output.getvalue()
     output.close()
+    
+    period_label = f"{days} days"
+    if days == 180:
+        period_label = "6 months"
+    elif days == 365:
+        period_label = "12 months"
+    elif days == 30:
+        period_label = "1 month"
 
-    filename = f"attendance_{user_email.replace('@', '_at_')}.csv"
+    filename = f"attendance_{user_email.replace('@', '_at_')}_{period_label.replace(' ', '_')}.csv"
     return Response(content=csv_content, media_type="text/csv", headers={
         "Content-Disposition":  f"attachment; filename={filename}"
     })
@@ -216,6 +247,7 @@ async def handle_attendance(
     latitude: float = Form(...),
     longitude: float = Form(...),
     comment: str = Form(None),
+    timezone_offset: int = Form(default=330),  # Default IST (UTC+5:30 = 330 minutes)
     db = Depends(get_db_connection)
 ):
     """Processes check-in and check-out requests."""
@@ -235,15 +267,19 @@ async def handle_attendance(
             status_code=status.HTTP_303_SEE_OTHER
         )
 
-    now = datetime.now()
-    current_time = now.time()
-    today = now.date()
+    # Get current time in IST
+    now_ist = get_ist_now()
+    current_time = now_ist.time()
+    today = now_ist.date()
+    
+    # Store as UTC for database (convert IST to UTC)
+    now_utc = datetime.now(pytz.UTC)
     
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """
         SELECT * FROM attendance 
-        WHERE user_email = %s AND DATE(event_time) = %s
+        WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s
         ORDER BY event_time DESC
         """,
         (user_email, today)
@@ -294,7 +330,7 @@ async def handle_attendance(
             (user_email, action, event_time, latitude, longitude, location_text, comment)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_email, action, now, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}", comment if comment else None)
+            (user_email, action, now_utc, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}", comment if comment else None)
         )
         db.commit()
         cursor.close()
@@ -309,7 +345,7 @@ async def handle_attendance(
             db.commit()
             cursor.close()
 
-        success_msg = f"Successfully+{action.replace('-', '+')}+at+{now.strftime('%I:%M+%p')}"
+        success_msg = f"Successfully+{action.replace('-', '+')}+at+{now_ist.strftime('%I:%M+%p')}"
         return RedirectResponse(
             url=f"/report?success={success_msg}",
             status_code=status.HTTP_303_SEE_OTHER
@@ -725,27 +761,30 @@ def _build_user_from_static(email):
         "bank_details": u.get("bank_details")
     }
 
-def _build_report_for_user(db, user_email, days:  int = 30):
+def _build_report_for_user(db, user_email, days: int = 30):
     """Build report rows for the last `days` days for the given user."""
-    end_date = datetime.now()
+    # Use IST for date calculations
+    end_date = get_ist_now()
     start_date = end_date - timedelta(days=days)
 
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """
         SELECT event_time, action FROM attendance
-        WHERE user_email = %s AND event_time BETWEEN %s AND %s
+        WHERE user_email = %s AND event_time AT TIME ZONE 'Asia/Kolkata' >= %s
         ORDER BY event_time ASC
         """,
-        (user_email, start_date, end_date)
+        (user_email, start_date)
     )
     rows = cursor.fetchall()
     cursor.close()
 
     by_date = {}
     for r in rows:
-        d = r["event_time"].date().isoformat()
-        by_date.setdefault(d, []).append(r)
+        # Convert UTC to IST for display
+        event_time_ist = r["event_time"].astimezone(IST) if r["event_time"].tzinfo else IST.localize(r["event_time"])
+        d = event_time_ist.date().isoformat()
+        by_date.setdefault(d, []).append({"event_time": event_time_ist, "action": r["action"]})
 
     report = []
     total_working_seconds = 0

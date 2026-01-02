@@ -60,6 +60,7 @@
                                 <th>Employee ID</th>
                                 <th>Employee Name</th>
                                 <th>Joining Date</th>
+                                <th>DOB</th>
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Phone</th>
@@ -81,6 +82,7 @@
                                 <td>{{ employee.employee_number or 'N/A' }}</td>
                                 <td>{{ employee.name }}</td>
                                 <td>{{ employee.joining_date }}</td>
+                                <td>{{ employee.dob or 'N/A' }}</td>
                                 <td>{{ employee.email }}</td>
                                 <td>{{ employee. job_role or 'Employee' }}</td>
                                 <td>{{ employee.phone or 'N/A' }}</td>

@@ -290,53 +290,46 @@
 
         <!-- Report Section -->
         <div id="report" class="section hidden">
-            <input type="text" placeholder="Search" class="search-box">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label for="periodSelector" style="font-weight: bold; color: #333;">Report Period:</label>
+                    <select id="periodSelector" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                        <option value="30" {% if period == '30' %}selected{% endif %}>Last 1 Month</option>
+                        <option value="180" {% if period == '180' %}selected{% endif %}>Last 6 Months</option>
+                        <option value="365" {% if period == '365' %}selected{% endif %}>Last 12 Months</option>
+                    </select>
+                </div>
+                <input type="text" placeholder="Search" class="search-box" style="flex: 1; min-width: 200px;">
+            </div>
 
             <div class="report-buttons">
-                <a href="/download_report" class="report-download-btn">Download Report</a>
+                <a href="#" onclick="downloadReport()" class="report-download-btn">Download Report</a>
             </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>Day</th>
+                        <th>Date</th>
                         <th>Check In</th>  
                         <th>Check Out</th>
-                        <th>Total Working Days</th>
+                        <th>Total Hours Worked</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTable">
-                    {% for record in records | reverse %}
-                    <tr>
-                        <td>
-                            {% if record.event_time %}
-                                {{ record.event_time.strftime('%Y-%m-%d') }}
-                            {% else %}
-                                {{ record.day }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if record.action == 'check-in' %}
-                                {{ record.event_time.strftime('%I:%M %p') if record.event_time else record.check_in }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if record.action == 'check-out' %}
-                                {{ record.event_time.strftime('%I:%M %p') if record.event_time else record.check_out }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            {{ record.total_hours if record.total_hours is defined else '-' }}</td>
-                    </tr>
+                    {% if report_data %}
+                        {% for record in report_data %}
+                        <tr>
+                            <td>{{ record.day }}</td>
+                            <td>{{ record.check_in }}</td>
+                            <td>{{ record.check_out }}</td>
+                            <td>{{ record.total_hours }}</td>
+                        </tr>
+                        {% endfor %}
                     {% else %}
                     <tr>
-                        <td colspan="4">No attendance records found for the current period.</td>
+                        <td colspan="4" style="text-align: center; padding: 20px; color: #999;">No attendance records found for the selected period.</td>
                     </tr>
-                    {% endfor %}
+                    {% endif %}
                 </tbody>
                 <tfoot>
                     <tr>
@@ -355,6 +348,18 @@
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('open');
+}
+
+// Period selector change handler
+document.getElementById('periodSelector').addEventListener('change', function(e) {
+    const period = e.target.value;
+    window.location.href = `/report?period=${period}`;
+});
+
+// Download report with selected period
+function downloadReport() {
+    const period = document.getElementById('periodSelector').value;
+    window.location.href = `/download_report?period=${period}`;
 }
 
 // Close sidebar when clicking outside on mobile

@@ -7,6 +7,7 @@ import psycopg2
 import psycopg2.extras
 from math import radians, cos, sin, asin, sqrt
 from typing import Optional, List, Dict
+import pytz
 
 import smtplib
 from email.message import EmailMessage
@@ -23,6 +24,11 @@ from data import (
     fetch_all_employees, update_employee_leave, fetch_attendance_for_period, fetch_monthly_attendance_all
 )
 import psycopg2
+
+# ===========================================================================
+# TIMEZONE CONFIGURATION
+# ===========================================================================
+IST = pytz.timezone('Asia/Kolkata')
 
 # ===========================================================================
 # SERVICE FUNCTIONS (Business Logic)
@@ -108,7 +114,8 @@ def mark_leaves_for_absent_employees():
     Marks 1 leave for employees who have not checked in today.
     Runs daily.
     """
-    today = date.today()
+    # Use IST date
+    today = datetime.now(IST).date()
     employees = fetch_all_employees()
     
     for employee in employees:
@@ -134,7 +141,7 @@ def send_monthly_report_email_task() -> None:
     This is a scheduled task that runs on a specific day (e.g., 20th) of the CURRENT month.
     """
     # 1. Calculate the year and month for the PREVIOUS calendar month
-    today = date.today()
+    today = datetime.now(IST).date()
     first_of_current_month = today.replace(day=1)
     last_day_of_previous_month = first_of_current_month - timedelta(days=1)
     year = last_day_of_previous_month.year

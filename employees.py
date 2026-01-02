@@ -16,7 +16,7 @@ users = {
         "aadhar": "2756 1817 0839",
         "pan_card": "EFPSS3361R",
         "salary": "35,000",
-        "bank_details": "State Bank of India, A/C No: 1234567890, IFSC: SBIN0001234",
+        "bank_details": "Canara Bank , A/C No: 5373101006912, IFSC: CNRB0005373, Branch: KOLLAPALLI",
         "total_leave": 0,  
         "total_working": 0 
     },
@@ -56,8 +56,8 @@ users = {
         "native": "Namakkal",
         "address": "3/324,murugankoil, salemroad,Namakkal - 637001",
         "aadhar": "2028 9976 5232",
-        "pan_card": "",
-        "bank_details": "",
+        "pan_card": "CDCPN1974M",
+        "bank_details": " BANK : INDIAN BANK , AC.NO : 6851385602 ,IFSC : IDIB000N153",
         "salary": "29,000",
         "total_leave": 0,
         "total_working": 0
@@ -99,7 +99,7 @@ users = {
         "address": "74, MGR Nagar, Rajaji Street, Chengam, Thiruvannamalai",
         "aadhar": "6162 1005 8657",
         "pan_card": "",
-        "bank_details": "",
+        "bank_details": "Bank Name: Karur Vysya Bank, A/C No: 1633194000008223, IFSC: KVBL0001633",
         "salary": "23,000",
         "total_leave": 0,
         "total_working": 0
@@ -140,8 +140,8 @@ users = {
         "native": "Tirupur",
         "address": "202/1b kuttivannan 1 at street samundipuram Tirupur 641603",
         "aadhar": "6072 9860 6570",
-        "pan_card": "",
-        "bank_details": "",
+        "pan_card": "EYJP B3249B",
+        "bank_details": " Bank Name :- ICICI BANK LTD , Ac/Number :- 615401078974 ,IFSC Code :- ICIC0006154",
         "salary": "35,000",
         "total_leave": 0,
         "total_working": 0
@@ -161,8 +161,8 @@ users = {
         "native": "karaikudi",
         "address": "bharathi street,  kallal",
         "aadhar": "3655 3245 0652",
-        "pan_card": "",
-        "bank_details": "",
+        "pan_card": "RQVPS4585Q",
+        "bank_details": "Bank Name: Indian Bank, A/C No: 7622287191, IFSC: IDIB000k162",
         "salary": "29,000",
         "total_leave": 0,
         "total_working": 0
@@ -193,11 +193,11 @@ users = {
         "name": "M. PAVITHRA",
         "email": "pavithra.m2007@gmail.com",
         "photo": "pavithra.jpeg",
-        "joining_date": "01/09/2025",
+        "joining_date": "12/11/2025",
         "employee_number": "ZPL013",
         "phone": "7904928403",
         "parent_phone": "8765432109",
-        "dob": "15/08/2000",
+        "dob": "03/07/2004",
         "gender": "Female",
         "job_role": "Sales & Marketing",
         "native": "Tamil Nadu",
@@ -292,5 +292,30 @@ users = {
         "salary": "15,000",
         "total_leave": 0,
         "total_working": 0
+    },
+    "ravizugopvt@gmail.com": {  
+        "password": "Ravi@123",
+        "name": "RAVI KUMAR S", 
+        "email": "ravikumarthangavel1996@gmail.com",
+        "photo": "ravi.jpg",
+        "joining_date": "15/12/2025",
+        "employee_number": "ZPL016",    
+        "phone": "7558117007",
+        "parent_phone": "9384496765",   
+        "dob": "17/08/1996",
+        "gender": "Male",
+        "job_role": "Site Manager",
+        "native": "Pollachi",
+        "address": "3/88 kaliannanpudur, kovilpalayam,Kinathukadavu-642110",
+        "aadhar": "7455 4082 9251",
+        "pan_card": "CLTPR4305M",
+        "bank_details": "HDFC Bank, A/C No: 50100718986722, IFSC: HDFC0003724, Branch: TIRUPPUR DHARAPURAM ROAD BRANCH, Account Type: Savings Account",
+        "salary": "30,000",
+        "total_leave": 0,
+        "total_working": 0
     }
+
 }
+
+
+
