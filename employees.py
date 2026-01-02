@@ -309,7 +309,7 @@ users = {
         "address": "3/88 kaliannanpudur, kovilpalayam,Kinathukadavu-642110",
         "aadhar": "7455 4082 9251",
         "pan_card": "CLTPR4305M",
-        "bank_details": "HDFC Bank, A/C No: 50100718986722, IFSC: HDFC0003724, Branch: TIRUPPUR DHARAPURAM ROAD BRANCH, Account Type: Savings Account",
+        "bank_details": "HDFC Bank, A/C No: 50100718986722, IFSC: HDFC0003724, Branch: TIRUPPUR ",
         "salary": "30,000",
         "total_leave": 0,
         "total_working": 0
