@@ -182,7 +182,7 @@ users = {
         "native": "Tirupur",
         "address": "246A , thiruneelakandar veethi 2 nd Street ,Thirumuruganpoondi,Tirupur_641652",
         "aadhar": "7874 0307 1611",
-        "pan_card": "",
+        "pan_card": "CPMPN1485D",
         "bank_details": "",
         "salary": "35,000",
         "total_leave": 0,
