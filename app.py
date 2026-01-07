@@ -9,12 +9,32 @@ from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta, timezone, time
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
-
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from typing import Optional
+
+import config
+from bills_services import (
+    create_invoice,
+    fetch_invoice_by_id,
+    fetch_invoice_by_number,
+    fetch_all_invoices,
+    update_invoice_status,
+    delete_invoice,
+    create_gst_bill,
+    fetch_gst_bill_by_id,
+    fetch_gst_bill_by_number,
+    fetch_all_gst_bills,
+    update_gst_bill_status,
+    delete_gst_bill,
+    get_invoice_summary,
+    get_gst_bill_summary,
+)
+from bills_schema import InvoiceCreate, InvoiceUpdate, GSTBillCreate, GSTBillUpdate
+from bills_models import initialize_billing_schema
 
 #  --- Local Imports ---
 import config
@@ -48,6 +68,7 @@ def get_ist_date():
 async def lifespan(app: FastAPI):
     print("Application startup...") 
     initialize_database_schema()
+    initialize_billing_schema()  # Initialize billing tables
     
     # Initialize APScheduler for daily absence marking
     scheduler = BackgroundScheduler()
@@ -269,7 +290,7 @@ async def handle_attendance(
     timezone_offset: int = Form(default=330),  # Default IST (UTC+5:30 = 330 minutes)
     db = Depends(get_db_connection)
 ):
-    """Processes check-in and check-out requests."""
+    """Processes check-in and check-out requests.""" 
     user_email = request.session.get("user_email")
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -1044,6 +1065,303 @@ async def delete_employee_endpoint(
         return {"success": True, "message": "Employee deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting employee: {str(e)}")
+
+# FastAPI endpoints for invoice and GST bill management
+def require_hr(request: Request):
+    """Dependency to ensure HR access"""
+    user_email = request.session.get("user_email")
+    if user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="Access denied. HR privileges required.")
+    return user_email
+
+
+# =========================================================================
+# API ENDPOINTS FOR BILLING (AJAX CALLS)
+# =========================================================================
+
+@app.get("/api/invoice/{invoice_id}")
+async def api_get_invoice(invoice_id: int, hr_email: str = Depends(require_hr)):
+    """Get invoice details for API"""
+    invoice = fetch_invoice_by_id(invoice_id)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return invoice
+
+
+@app.get("/api/gst-bill/{bill_id}")
+async def api_get_gst_bill(bill_id: int, hr_email: str = Depends(require_hr)):
+    """Get GST bill details for API"""
+    bill = fetch_gst_bill_by_id(bill_id)
+    if not bill:
+        raise HTTPException(status_code=404, detail="GST bill not found")
+    return bill
+
+
+# =========================================================================
+# INVOICE ENDPOINTS
+# =========================================================================
+
+@app.get("/billing", response_class=HTMLResponse, name="billing", summary="Display billing page")
+async def get_billing(request: Request, hr_email: str = Depends(require_hr)):
+    """Display billing dashboard with invoices and GST bills"""
+    try:
+        invoices = fetch_all_invoices(limit=100)
+        bills = fetch_all_gst_bills(limit=100)
+        
+        # Calculate summaries
+        invoice_summary = get_invoice_summary()
+        bill_summary = get_gst_bill_summary()
+        
+        return templates.TemplateResponse("billing.html", {
+            "request": request,
+            "invoices": invoices,
+            "bills": bills,
+            "invoice_summary": invoice_summary,
+            "bill_summary": bill_summary,
+            "is_hr": True
+        })
+    except Exception as e:
+        print(f"Error in /billing endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Billing page error: {str(e)}")
+
+
+@app.get("/invoices", response_class=HTMLResponse, summary="Display invoices page")
+async def get_invoices(request: Request, hr_email: str = Depends(require_hr)):
+    """Display all invoices with filtering and search"""
+    invoices = fetch_all_invoices(limit=100)
+    
+    # Calculate summary
+    summary = get_invoice_summary()
+    
+    return templates.TemplateResponse("billing.html", {
+        "request": request,
+        "invoices": invoices,
+        "summary": summary,
+        "page": "invoices"
+    })
+
+
+@app.get("/invoice/{invoice_id}", response_class=HTMLResponse)
+async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = Depends(require_hr)):
+    """Get detailed view of a single invoice"""
+    invoice = fetch_invoice_by_id(invoice_id)
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    return templates.TemplateResponse("invoice_view.html", {
+        "request": request,
+        "invoice": invoice,
+    })
+
+
+@app.post("/invoice/create")
+async def create_new_invoice(
+    request: Request,
+    invoice_no: str = Form(...),
+    date: str = Form(...),
+    vendor_name: str = Form(...),
+    vendor_gstin: Optional[str] = Form(None),
+    vendor_address: Optional[str] = Form(None),
+    customer_name: str = Form(...),
+    customer_gstin: Optional[str] = Form(None),
+    customer_address: Optional[str] = Form(None),
+    description: str = Form(...),
+    hsn_code: Optional[str] = Form(None),
+    uom: Optional[str] = Form(None),
+    quantity: float = Form(...),
+    rate: float = Form(...),
+    cgst: Optional[float] = Form(0),
+    sgst: Optional[float] = Form(0),
+    igst: Optional[float] = Form(0),
+    notes: Optional[str] = Form(None),
+    hr_email: str = Depends(require_hr)
+):
+    """Create a new invoice"""
+    try:
+        invoice_data = {
+            "invoice_no": invoice_no,
+            "date": date,
+            "vendor_name": vendor_name,
+            "vendor_gstin": vendor_gstin,
+            "vendor_address": vendor_address,
+            "customer_name": customer_name,
+            "customer_gstin": customer_gstin,
+            "customer_address": customer_address,
+            "description": description,
+            "hsn_code": hsn_code,
+            "uom": uom,
+            "quantity": quantity,
+            "rate": rate,
+            "cgst": cgst or 0,
+            "sgst": sgst or 0,
+            "igst": igst or 0,
+            "notes": notes,
+            "status": "draft"
+        }
+        
+        result = create_invoice(invoice_data)
+        return RedirectResponse(url=f"/billing/invoice/{result['id']}", status_code=303)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create invoice: {str(e)}")
+
+
+@app.post("/invoice/{invoice_id}/update-status")
+async def update_invoice_status_endpoint(
+    invoice_id: int,
+    status: str = Form(...),
+    request: Request = None,
+    hr_email: str = Depends(require_hr)
+):
+    """Update invoice status"""
+    try:
+        success = update_invoice_status(invoice_id, status)
+        if not success:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        return {"message": "Invoice status updated", "status": status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to update invoice: {str(e)}")
+
+
+@app.delete("/invoice/{invoice_id}")
+async def delete_invoice_endpoint(
+    invoice_id: int,
+    hr_email: str = Depends(require_hr)
+):
+    """Delete an invoice"""
+    try:
+        success = delete_invoice(invoice_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        return {"message": "Invoice deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete invoice: {str(e)}")
+
+
+# =========================================================================
+# GST BILL ENDPOINTS
+# =========================================================================
+
+@app.get("/gst-bills", response_class=HTMLResponse, summary="Display GST bills page")
+async def get_gst_bills(request: Request, hr_email: str = Depends(require_hr)):
+    """Display all GST bills with filtering and search"""
+    bills = fetch_all_gst_bills(limit=100)
+    
+    # Calculate summary
+    summary = get_gst_bill_summary()
+    
+    return templates.TemplateResponse("billing.html", {
+        "request": request,
+        "bills": bills,
+        "summary": summary,
+        "page": "gst_bills"
+    })
+
+
+@app.get("/gst-bill/{bill_id}", response_class=HTMLResponse)
+async def get_gst_bill_detail(bill_id: int, request: Request, hr_email: str = Depends(require_hr)):
+    """Get detailed view of a single GST bill"""
+    bill = fetch_gst_bill_by_id(bill_id)
+    
+    if not bill:
+        raise HTTPException(status_code=404, detail="GST bill not found")
+    
+    return templates.TemplateResponse("gst_bill_view.html", {
+        "request": request,
+        "bill": bill,
+    })
+
+
+@app.post("/gst-bill/create")
+async def create_new_gst_bill(
+    request: Request,
+    bill_no: str = Form(...),
+    date: str = Form(...),
+    vendor_name: str = Form(...),
+    vendor_gstin: str = Form(...),
+    amount: float = Form(...),
+    supply_type: str = Form("intra"),
+    cgst: Optional[float] = Form(0),
+    sgst: Optional[float] = Form(0),
+    igst: Optional[float] = Form(0),
+    description: Optional[str] = Form(None),
+    hr_email: str = Depends(require_hr)
+):
+    """Create a new GST bill"""
+    try:
+        bill_data = {
+            "bill_no": bill_no,
+            "date": date,
+            "vendor_name": vendor_name,
+            "vendor_gstin": vendor_gstin,
+            "amount": amount,
+            "supply_type": supply_type,
+            "cgst": cgst or 0,
+            "sgst": sgst or 0,
+            "igst": igst or 0,
+            "description": description,
+            "status": "received"
+        }
+        
+        result = create_gst_bill(bill_data)
+        return RedirectResponse(url=f"/billing/gst-bill/{result['id']}", status_code=303)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create GST bill: {str(e)}")
+
+
+@app.post("/gst-bill/{bill_id}/update-status")
+async def update_gst_bill_status_endpoint(
+    bill_id: int,
+    status: str = Form(...),
+    request: Request = None,
+    hr_email: str = Depends(require_hr)
+):
+    """Update GST bill status"""
+    try:
+        success = update_gst_bill_status(bill_id, status)
+        if not success:
+            raise HTTPException(status_code=404, detail="GST bill not found")
+        return {"message": "GST bill status updated", "status": status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to update GST bill: {str(e)}")
+
+
+@app.delete("/gst-bill/{bill_id}")
+async def delete_gst_bill_endpoint(
+    bill_id: int,
+    hr_email: str = Depends(require_hr)
+):
+    """Delete a GST bill"""
+    try:
+        success = delete_gst_bill(bill_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="GST bill not found")
+        return {"message": "GST bill deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete GST bill: {str(e)}")
+
+
+# =========================================================================
+# REPORTING ENDPOINTS
+# =========================================================================
+
+@app.get("/summary")
+async def get_billing_summary(
+    hr_email: str = Depends(require_hr)
+):
+    """Get billing summary statistics"""
+    invoice_summary = get_invoice_summary()
+    bill_summary = get_gst_bill_summary()
+    
+    return {
+        "invoices": invoice_summary,
+        "gst_bills": bill_summary,
+        "total_revenue": (invoice_summary.get('total_amount', 0) or 0),
+        "pending_invoices": invoice_summary.get('total_invoices', 0) - invoice_summary.get('paid_count', 0),
+        "total_bills": bill_summary.get('total_bills', 0)
+    }
 
 
 # ===========================================================================

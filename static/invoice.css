@@ -1,0 +1,425 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+}
+
+.invoice-actions {
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.invoice-actions button {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-print { 
+    background: #333; 
+}
+
+.btn-print:hover {
+    background: #555;
+}
+
+.btn-download { 
+    background: #27ae60; 
+}
+
+.btn-download:hover {
+    background: #229954;
+}
+
+.btn-download:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+.btn-save {
+    background: #3498db;
+}
+
+.btn-save:hover {
+    background: #2980b9;
+}
+
+.btn-save:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+.btn-cancel {
+    background: #e74c3c;
+}
+
+.btn-cancel:hover {
+    background: #c0392b;
+}
+
+.btn-cancel:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+.btn-back { 
+    background: #7f8c8d; 
+}
+
+.btn-back:hover {
+    background: #6c757d;
+}
+
+/* Main A4 Container */
+.invoice-container {
+    background: white;
+    width: 210mm; /* A4 Width */
+    min-height: 297mm;
+    margin: auto;
+    padding: 10mm;
+    box-sizing: border-box;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    font-size: 11px; /* Small font like sample */
+    color: #000;
+}
+
+h2 {
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin: 0 0 15px 0;
+    text-transform: uppercase;
+}
+
+.invoice-title {
+    text-align: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+/* The Grid System */
+.invoice-box {
+    width: 100%;
+    border: 1px solid #000;
+    border-collapse: collapse;
+}
+
+.invoice-box td {
+    border: 1px solid #000;
+    padding: 4px;
+    vertical-align: top;
+}
+
+/* Nested tables for clean layout without double borders */
+table.nested {
+    width: 100%;
+    border-collapse: collapse;
+    margin: -4px;
+    width: calc(100% + 8px);
+}
+
+table.nested td {
+    border: none;
+    border-bottom: 1px solid #000;
+    padding: 4px;
+}
+
+table.nested tr:last-child td {
+    border-bottom: none;
+}
+
+table.nested td.border-right {
+    border-right: 1px solid #000;
+}
+
+/* General Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+}
+
+td, th {
+    padding: 4px;
+    vertical-align: top;
+}
+
+/* Header Table */
+.header-table {
+    width: 100%;
+    border: 1px solid #000;
+    margin-bottom: 5px;
+}
+
+.header-table td {
+    border: 1px solid #000;
+    padding: 8px;
+}
+
+.no-border td,
+.no-border th {
+    border: none !important;
+    padding: 4px;
+}
+
+/* Address Table */
+.address-table {
+    width: 100%;
+    border: 1px solid #000;
+    margin-bottom: 5px;
+}
+
+.address-table td {
+    border: 1px solid #000;
+    padding: 6px;
+    font-size: 11px;
+}
+
+/* Company Info Styles */
+.company-name {
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.label {
+    color: #333;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Item Table */
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 5px 0;
+}
+
+.item-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 5px 0;
+}
+
+.items-table th,
+.item-table th {
+    border: 1px solid #000;
+    background-color: #e0e0e0;
+    font-weight: normal;
+    font-size: 10px;
+    padding: 4px;
+    text-align: center;
+}
+
+.items-table td,
+.item-table td {
+    border: 1px solid #000;
+    padding: 4px;
+}
+
+.section-title {
+    font-weight: bold;
+    background: #e0e0e0;
+    border: 1px solid #000;
+}
+
+/* Specific alignments */
+.text-right { 
+    text-align: right; 
+}
+
+.right {
+    text-align: right;
+}
+
+.text-center { 
+    text-align: center; 
+}
+
+.center {
+    text-align: center;
+}
+
+.bold { 
+    font-weight: bold; 
+}
+
+.uppercase { 
+    text-transform: uppercase; 
+}
+
+/* Height utilities to push content down like the sample */
+.min-h-150 { 
+    min-height: 150px; 
+    display: block;
+}
+
+.min-h-50 { 
+    min-height: 50px; 
+    display: block;
+}
+
+/* Total Row */
+.total-row {
+    background: #f0f0f0;
+    font-weight: bold;
+    border: 2px solid #000;
+}
+
+.total-row td,
+.total-row th {
+    border: 1px solid #000;
+}
+
+/* Tax Table at bottom */
+.tax-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin: 5px 0;
+}
+
+.tax-table td, 
+.tax-table th {
+    border: 1px solid #000;
+    padding: 4px;
+    text-align: right;
+}
+
+.tax-table th {
+    text-align: center;
+    background: #f0f0f0;
+    font-weight: bold;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.status-badge.paid {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.draft {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+/* Content Paragraphs */
+p {
+    margin: 8px 0;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+p strong {
+    font-weight: bold;
+}
+
+/* Footer Section */
+.footer-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.signature-box {
+    border: 1px solid #000;
+    width: 48%;
+    text-align: center;
+    padding-top: 40px;
+    padding-bottom: 10px;
+    font-size: 10px;
+}
+
+/* Stamp Section */
+.stamp {
+    margin-top: 20px;
+    text-align: right;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.stamp strong {
+    display: block;
+    margin-bottom: 30px;
+    font-size: 11px;
+}
+
+/* Print Styles */
+@media print {
+    body { 
+        background: white; 
+        padding: 0;
+        margin: 0;
+    }
+
+    .invoice-actions { 
+        display: none !important; 
+    }
+
+    .invoice-container {
+        width: 100%;
+        box-shadow: none;
+        padding: 10mm;
+        margin: 0;
+        border: none;
+        min-height: auto;
+    }
+
+    /* Ensure background colors print */
+    .item-table th, 
+    .items-table th,
+    .tax-table th,
+    .section-title {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    table {
+        page-break-inside: avoid;
+    }
+
+    p {
+        page-break-inside: avoid;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .invoice-container {
+        width: 95%;
+        padding: 5mm;
+    }
+
+    table {
+        font-size: 10px;
+    }
+
+    td, th {
+        padding: 3px;
+    }
+}

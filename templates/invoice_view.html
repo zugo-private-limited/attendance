@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice - {{ invoice.invoice_no }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='invoice.css') }}" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="invoice-actions">
+        <button class="btn-print" onclick="window.print()">Print</button>
+        <button class="btn-download" onclick="downloadInvoicePDF()">Download PDF</button>
+        <button class="btn-back" onclick="window.history.back()">Back</button>
+    </div>
+
+    <div class="invoice-container" id="invoice_content">
+        <div class="invoice-title">Tax Invoice</div>
+
+        <!-- Main Outer Border -->
+        <table class="invoice-box">
+            <!-- Row 1: Seller Info & Invoice References -->
+            <tr>
+                <td width="50%">
+                    <div class="company-name">{{ invoice.vendor_name }}</div>
+                    <div>{{ invoice.vendor_address | replace('\n', '<br>') | safe }}</div>
+                    <div>GSTIN/UIN: {{ invoice.vendor_gstin }}</div>
+                    <div>State Name: Tamil Nadu, Code: 33</div>
+                    <br>
+                    <div class="label">Consignee (Ship to)</div>
+                    <div class="bold">{{ invoice.customer_name }}</div>
+                    <div>{{ invoice.customer_address | replace('\n', '<br>') | safe }}</div>
+                    <div>GSTIN/UIN: {{ invoice.customer_gstin }}</div>
+                    <div>State Name: Tamil Nadu, Code: 33</div>
+                </td>
+                <td width="50%" style="padding:0; border:0;">
+                    <table class="nested">
+                        <tr>
+                            <td class="border-right" width="50%">
+                                <div class="label">Invoice No.</div>
+                                <div class="bold">{{ invoice.invoice_no }}</div>
+                            </td>
+                            <td>
+                                <div class="label">Dated</div>
+                                <div class="bold">{{ invoice.date }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="border-right">
+                                <div class="label">Reference No. & Date</div>
+                                <div>&nbsp;</div>
+                            </td>
+                            <td>
+                                <div class="label">Other References</div>
+                                <div>&nbsp;</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="border-right">
+                                <div class="label">Buyer's Order No.</div>
+                                <div>&nbsp;</div>
+                            </td>
+                            <td>
+                                <div class="label">Dated</div>
+                                <div>&nbsp;</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div class="label">Terms of Delivery</div>
+                                <div>&nbsp;<br>&nbsp;</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <!-- Row 2: Buyer (Bill to) - if different, otherwise same as above -->
+            <tr>
+                <td colspan="2">
+                    <div class="label">Buyer (Bill to)</div>
+                    <div class="bold">{{ invoice.customer_name }}</div>
+                    <div>{{ invoice.customer_address | replace('\n', '<br>') | safe }}</div>
+                    <div>GSTIN/UIN: {{ invoice.customer_gstin }}</div>
+                    <div>State Name: Tamil Nadu, Code: 33</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Row 3: Item Table -->
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th width="5%">SI No.</th>
+                    <th width="35%">Description of Goods</th>
+                    <th width="10%">HSN/SAC</th>
+                    <th width="10%">Quantity</th>
+                    <th width="10%">Rate</th>
+                    <th width="5%">per</th>
+                    <th width="5%">Disc. %</th>
+                    <th width="20%">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>
+                        <div class="bold">{{ invoice.description }}</div>
+                        <div class="min-h-150">&nbsp;</div> <!-- Spacer for visual similarity -->
+                        <div class="text-right bold">CGST</div>
+                        <div class="text-right bold">SGST</div>
+                    </td>
+                    <td class="text-center">{{ invoice.hsn_code }}</td>
+                    <td class="text-center"><b>{{ invoice.quantity }}</b> No</td>
+                    <td class="text-right">{{ "%.2f" | format(invoice.rate) }}</td>
+                    <td class="text-center">No</td>
+                    <td class="text-center"></td>
+                    <td class="text-right">
+                        <b>{{ "%.2f" | format(invoice.rate * invoice.quantity) }}</b><br>
+                        <br><br><br><br><br><br><br> <!-- Spacing to match image -->
+                        {{ "%.2f" | format(cgst_amount) }}<br>
+                        {{ "%.2f" | format(sgst_amount) }}
+                    </td>
+                </tr>
+                <!-- Total Row inside items -->
+                <tr style="border-top: 1px solid #000;">
+                    <td colspan="3" class="text-right">Total</td>
+                    <td class="text-center bold">{{ invoice.quantity }} No</td>
+                    <td colspan="3"></td>
+                    <td class="text-right bold">₹ {{ "%.2f" | format(total_amount) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="border: 1px solid #000; border-top: none; padding: 5px;">
+            <div class="label">Amount Chargeable (in words)</div>
+            <div class="bold">INR <span id="totalAmountWords">Three Thousand Four Hundred</span> Only</div>
+        </div>
+
+        <!-- Tax Breakdown Table -->
+        <table class="tax-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    {% if invoice.igst %}
+                    <th rowspan="2">HSN/SAC</th>
+                    <th rowspan="2">Taxable Value</th>
+                    <th colspan="2">Integrated Tax</th>
+                    <th rowspan="2">Total Tax Amount</th>
+                    {% else %}
+                    <th rowspan="2">HSN/SAC</th>
+                    <th rowspan="2">Taxable Value</th>
+                    <th colspan="2">Central Tax</th>
+                    <th colspan="2">State Tax</th>
+                    <th rowspan="2">Total Tax Amount</th>
+                    {% endif %}
+                </tr>
+                <tr>
+                    {% if invoice.igst %}
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    {% else %}
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% if invoice.igst %}
+                    <td class="text-center">{{ invoice.hsn_code }}</td>
+                    <td>{{ "%.2f" | format(taxable_value) }}</td>
+                    <td>{{ invoice.igst }}%</td>
+                    <td>{{ "%.2f" | format(igst_amount) }}</td>
+                    <td>{{ "%.2f" | format(igst_amount) }}</td>
+                    {% else %}
+                    <td class="text-center">{{ invoice.hsn_code }}</td>
+                    <td>{{ "%.2f" | format(taxable_value) }}</td>
+                    <td>{{ invoice.cgst }}%</td>
+                    <td>{{ "%.2f" | format(cgst_amount) }}</td>
+                    <td>{{ invoice.sgst }}%</td>
+                    <td>{{ "%.2f" | format(sgst_amount) }}</td>
+                    <td>{{ "%.2f" | format(cgst_amount + sgst_amount) }}</td>
+                    {% endif %}
+                </tr>
+                <tr class="bold">
+                    {% if invoice.igst %}
+                    <td class="text-right">Total</td>
+                    <td>{{ "%.2f" | format(taxable_value) }}</td>
+                    <td></td>
+                    <td>{{ "%.2f" | format(igst_amount) }}</td>
+                    <td>{{ "%.2f" | format(igst_amount) }}</td>
+                    {% else %}
+                    <td class="text-right">Total</td>
+                    <td>{{ "%.2f" | format(taxable_value) }}</td>
+                    <td></td>
+                    <td>{{ "%.2f" | format(cgst_amount) }}</td>
+                    <td></td>
+                    <td>{{ "%.2f" | format(sgst_amount) }}</td>
+                    <td>{{ "%.2f" | format(cgst_amount + sgst_amount) }}</td>
+                    {% endif %}
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="border: 1px solid #000; border-top: none; padding: 5px;">
+            <div class="label">Tax Amount (in words) : INR <span id="taxAmountWords">Four Hundred Fifty</span> Only</div>
+        </div>
+
+        <div class="footer-section">
+            <div style="width: 50%; font-size: 10px;">
+                <u>Declaration</u><br>
+                We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+            </div>
+            <div class="signature-box">
+                <div class="label" style="text-align: right; padding-right: 5px;">for <b>{{ invoice.vendor_name }}</b></div>
+                <br><br><br>
+                <div class="label" style="text-align: right; padding-right: 5px;">Authorised Signatory</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 10px; font-size: 10px;">
+            This is a Computer Generated Invoice
+        </div>
+
+    </div>
+
+    <script>
+        function downloadInvoicePDF() {
+            const element = document.getElementById('invoice_content');
+            const opt = {
+                margin: 0,
+                filename: 'invoice.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // Number to words conversion function
+        function numberToWords(num) {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
+
+            if (num === 0) return 'Zero';
+
+            // Handle negative numbers
+            if (num < 0) {
+                return 'Minus ' + numberToWords(-num);
+            }
+
+            // Split into integer and decimal parts
+            let parts = num.toString().split('.');
+            let integerPart = parseInt(parts[0]);
+            let decimalPart = parts.length > 1 ? parts[1] : null;
+
+            // Convert integer part
+            function convertIntegerToWords(n) {
+                if (n === 0) return '';
+                if (n < 10) return ones[n];
+                if (n < 20) return teens[n - 10];
+                if (n < 100) {
+                    let tens_digit = Math.floor(n / 10);
+                    let ones_digit = n % 10;
+                    return tens[tens_digit] + (ones_digit > 0 ? ' ' + ones[ones_digit] : '');
+                }
+                if (n < 1000) {
+                    let hundreds_digit = Math.floor(n / 100);
+                    let remainder = n % 100;
+                    return ones[hundreds_digit] + ' Hundred' + (remainder > 0 ? ' ' + convertIntegerToWords(remainder) : '');
+                }
+                for (let i = scales.length - 1; i > 0; i--) {
+                    let scale = Math.pow(1000, i);
+                    if (n >= scale) {
+                        let quotient = Math.floor(n / scale);
+                        let remainder = n % scale;
+                        return convertIntegerToWords(quotient) + ' ' + scales[i] + (remainder > 0 ? ' ' + convertIntegerToWords(remainder) : '');
+                    }
+                }
+                return '';
+            }
+
+            let result = convertIntegerToWords(integerPart);
+
+            // Add decimal part if present
+            if (decimalPart && parseInt(decimalPart) > 0) {
+                result += ' Point';
+                for (let digit of decimalPart) {
+                    result += ' ' + ones[parseInt(digit)];
+                }
+            }
+
+            return result;
+        }
+
+        // Initialize amounts in words on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if invoice.igst %}
+            const taxAmount = {{ (igst_amount) | round(2) }};
+            {% else %}
+            const taxAmount = {{ (cgst_amount + sgst_amount) | round(2) }};
+            {% endif %}
+            const totalAmount = {{ (total_amount) | round(2) }};
+            
+            const taxAmountWordsSpan = document.getElementById('taxAmountWords');
+            const totalAmountWordsSpan = document.getElementById('totalAmountWords');
+            
+            if (taxAmountWordsSpan) {
+                taxAmountWordsSpan.textContent = numberToWords(taxAmount);
+            }
+            if (totalAmountWordsSpan) {
+                totalAmountWordsSpan.textContent = numberToWords(totalAmount);
+            }
+        });
+    </script>
+</body>
+</html>
