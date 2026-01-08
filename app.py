@@ -10,11 +10,13 @@ from datetime import datetime, date, timedelta, timezone, time
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.sessions import SessionMiddleware
 from typing import Optional
+import logging
 
 import config
 from bills_services import (
@@ -105,6 +107,16 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Jinja2 Templates setup
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# Custom exception handler for validation errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Log validation errors for debugging"""
+    logging.error(f"Validation error on {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body}
+    )
 
 @app.get("/", response_class=HTMLResponse, summary="Display login page")
 async def login_page(request: Request): 
@@ -221,7 +233,7 @@ async def report(request: Request, period: str = "30", db = Depends(get_db_conne
         "success": request.query_params.get("success"),
         "is_hr": is_hr,
         "period": period
-    })
+    }) 
 
 @app.get("/download_report", summary="Download attendance report as CSV")
 async def download_report(request: Request, period: str = "30", db = Depends(get_db_connection)):
@@ -1151,9 +1163,69 @@ async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
+    # Normalize nullable fields to avoid template errors
+    def to_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+    
+    # Extract and normalize values
+    quantity = to_float(invoice.get("quantity"))
+    rate = to_float(invoice.get("rate"))
+    cgst = to_float(invoice.get("cgst"))
+    sgst = to_float(invoice.get("sgst"))
+    igst = to_float(invoice.get("igst"))
+    
+    # Calculate amounts
+    subtotal = quantity * rate
+    taxable_value = subtotal  # Same as subtotal, used in template
+    cgst_amount = subtotal * cgst / 100
+    sgst_amount = subtotal * sgst / 100
+    igst_amount = subtotal * igst / 100
+    total_amount = subtotal + cgst_amount + sgst_amount + igst_amount
+    
+    invoice = {
+        **invoice,
+        "vendor_address": invoice.get("vendor_address") or "",
+        "customer_address": invoice.get("customer_address") or "",
+        "vendor_gstin": invoice.get("vendor_gstin") or "",
+        "customer_gstin": invoice.get("customer_gstin") or "",
+        "hsn_code": invoice.get("hsn_code") or "",
+        "uom": invoice.get("uom") or "No",
+        "quantity": quantity,
+        "rate": rate,
+        "cgst": cgst,
+        "sgst": sgst,
+        "igst": igst,
+        # Calculated fields for template
+        "subtotal": subtotal,
+        "taxable_value": taxable_value,
+        "cgst_amount": cgst_amount,
+        "sgst_amount": sgst_amount,
+        "igst_amount": igst_amount,
+        "total_amount": total_amount,
+    }
+    
+    # Bank details for invoice
+    bank_details = {
+        "account_holder": "ZUGO PRIVATE LIMITED",
+        "bank_name": "AXIS BANK",
+        "account_number": "925020039794750",
+        "ifsc_code": "UTIB0002810",
+        "branch": "Kumar Nagar"
+    }
+    
     return templates.TemplateResponse("invoice_view.html", {
         "request": request,
         "invoice": invoice,
+        "bank_details": bank_details,
+        # Also pass calculated fields at root level for template access
+        "taxable_value": taxable_value,
+        "cgst_amount": cgst_amount,
+        "sgst_amount": sgst_amount,
+        "igst_amount": igst_amount,
+        "total_amount": total_amount,
     })
 
 
@@ -1161,7 +1233,7 @@ async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = 
 async def create_new_invoice(
     request: Request,
     invoice_no: str = Form(...),
-    date: str = Form(...),
+    invoice_date: str = Form(...),
     vendor_name: str = Form(...),
     vendor_gstin: Optional[str] = Form(None),
     vendor_address: Optional[str] = Form(None),
@@ -1171,19 +1243,28 @@ async def create_new_invoice(
     description: str = Form(...),
     hsn_code: Optional[str] = Form(None),
     uom: Optional[str] = Form(None),
-    quantity: float = Form(...),
-    rate: float = Form(...),
-    cgst: Optional[float] = Form(0),
-    sgst: Optional[float] = Form(0),
-    igst: Optional[float] = Form(0),
+    quantity: str = Form(...),
+    rate: str = Form(...),
+    cgst: Optional[str] = Form("0"),
+    sgst: Optional[str] = Form("0"),
+    igst: Optional[str] = Form("0"),
     notes: Optional[str] = Form(None),
     hr_email: str = Depends(require_hr)
 ):
     """Create a new invoice"""
     try:
+        # Convert string form values to floats, handling empty strings
+        def to_float(value: str, default: float = 0.0) -> float:
+            if not value or value.strip() == "":
+                return default
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return default
+        
         invoice_data = {
             "invoice_no": invoice_no,
-            "date": date,
+            "date": invoice_date,
             "vendor_name": vendor_name,
             "vendor_gstin": vendor_gstin,
             "vendor_address": vendor_address,
@@ -1193,18 +1274,19 @@ async def create_new_invoice(
             "description": description,
             "hsn_code": hsn_code,
             "uom": uom,
-            "quantity": quantity,
-            "rate": rate,
-            "cgst": cgst or 0,
-            "sgst": sgst or 0,
-            "igst": igst or 0,
+            "quantity": to_float(quantity, 1.0),
+            "rate": to_float(rate, 0.0),
+            "cgst": to_float(cgst, 0.0),
+            "sgst": to_float(sgst, 0.0),
+            "igst": to_float(igst, 0.0),
             "notes": notes,
             "status": "draft"
         }
         
         result = create_invoice(invoice_data)
-        return RedirectResponse(url=f"/billing/invoice/{result['id']}", status_code=303)
+        return RedirectResponse(url=f"/invoice/{result['id']}", status_code=303)
     except Exception as e:
+        logging.error(f"Error creating invoice: {str(e)}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Failed to create invoice: {str(e)}")
 
 
@@ -1278,7 +1360,7 @@ async def get_gst_bill_detail(bill_id: int, request: Request, hr_email: str = De
 async def create_new_gst_bill(
     request: Request,
     bill_no: str = Form(...),
-    date: str = Form(...),
+    bill_date: str = Form(...),
     vendor_name: str = Form(...),
     vendor_gstin: str = Form(...),
     amount: float = Form(...),
@@ -1293,7 +1375,7 @@ async def create_new_gst_bill(
     try:
         bill_data = {
             "bill_no": bill_no,
-            "date": date,
+            "date": bill_date,
             "vendor_name": vendor_name,
             "vendor_gstin": vendor_gstin,
             "amount": amount,
@@ -1306,7 +1388,7 @@ async def create_new_gst_bill(
         }
         
         result = create_gst_bill(bill_data)
-        return RedirectResponse(url=f"/billing/gst-bill/{result['id']}", status_code=303)
+        return RedirectResponse(url=f"/gst-bill/{result['id']}", status_code=303)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create GST bill: {str(e)}")
 
