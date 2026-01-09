@@ -104,8 +104,9 @@
                                     {% endif %}
                                </td>
                                 <td style="text-align: center;">
-                                    <button onclick="editEmployee('{{ employee.email }}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">Edit</button>
-                                    <button onclick="deleteEmployee('{{ employee.email }}', '{{ employee.name }}')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
+                                    <button onclick="viewEmployeeReport('{{ employee.email }}', '{{ employee.name }}')" style="background: #27ae60; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; margin-bottom: 3px;">View Report</button>
+                                    <button onclick="editEmployee('{{ employee.email }}')" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; margin-bottom: 3px;">Edit</button>
+                                    <button onclick="deleteEmployee('{{ employee.email }}', '{{ employee.name }}')" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 3px;">Delete</button>
                                 </td>
                                 {% if is_hr %}
                                 {% endif %}
@@ -654,6 +655,11 @@
         function viewDetails(email) {
             // Open detailed view page
             window.location.href = `/employee/${encodeURIComponent(email)}`;
+        }
+
+        function viewEmployeeReport(email, name) {
+            // Open employee attendance report in new window
+            window.open(`/employee/${encodeURIComponent(email)}/attendance-report?period=30`, '_blank');
         }
 
         // ===== COMMENTS/MESSAGES FUNCTIONALITY =====

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report - {{ employee.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='report.css') }}">
+    <style>
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-edit {
+            background: #3498db;
+            color: white;
+        }
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <a href="/hr-management" class="back-btn">← Back to HR Management</a>
+            <h1>{{ employee.name }} - Attendance Report</h1>
+            <p>{{ employee.email }} | Employee ID: {{ employee.employee_number or 'N/A' }}</p>
+            <div style="margin-top: 15px;">
+                <a href="?period=30" style="color: white; margin-right: 10px; {% if period == '30' %}text-decoration: underline;{% endif %}">30 Days</a>
+                <a href="?period=180" style="color: white; margin-right: 10px; {% if period == '180' %}text-decoration: underline;{% endif %}">6 Months</a>
+                <a href="?period=365" style="color: white; {% if period == '365' %}text-decoration: underline;{% endif %}">1 Year</a>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <h3>Summary</h3>
+            <p><strong>Total Working Hours:</strong> {{ total_working_hours }} hours</p>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Total Hours</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in report_data %}
+                    <tr>
+                        <td>{{ record.day }}</td>
+                        <td>{{ record.check_in or '-' }}</td>
+                        <td>{{ record.check_out or '-' }}</td>
+                        <td>{{ record.total_hours or '-' }}</td>
+                        <td class="actions-cell">
+                            {% if record.check_in_id or record.check_out_id %}
+                            {% if record.check_in_id %}
+                            <button class="btn-small btn-edit" onclick="editAttendanceRecord({{ record.check_in_id }})" title="Edit Check-In (ID: {{ record.check_in_id }})">Edit In</button>
+                            <button class="btn-small btn-delete" onclick="deleteAttendanceRecord({{ record.check_in_id }})" title="Delete Check-In (ID: {{ record.check_in_id }})">Del In</button>
+                            {% else %}
+                            <span style="color: #999; font-size: 11px;">No Check-In</span>
+                            {% endif %}
+                            {% if record.check_out_id %}
+                            <button class="btn-small btn-edit" onclick="editAttendanceRecord({{ record.check_out_id }})" title="Edit Check-Out (ID: {{ record.check_out_id }})">Edit Out</button>
+                            <button class="btn-small btn-delete" onclick="deleteAttendanceRecord({{ record.check_out_id }})" title="Delete Check-Out (ID: {{ record.check_out_id }})">Del Out</button>
+                            {% else %}
+                            <span style="color: #999; font-size: 11px;">No Check-Out</span>
+                            {% endif %}
+                            {% else %}
+                            <span style="color: #999; font-size: 11px;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: #999;">No attendance records found for the selected period.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit Attendance Modal -->
+    <div id="editAttendanceModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Edit Attendance Record</h3>
+            <form id="editAttendanceForm" method="POST" onsubmit="handleEditFormSubmit(event)">
+                <input type="hidden" id="editAttendanceId" name="attendance_id">
+                <div class="form-group">
+                    <label for="edit_attendance_date">Date *</label>
+                    <input type="date" id="edit_attendance_date" name="attendance_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_attendance_time">Time (HH:MM) *</label>
+                    <input type="time" id="edit_attendance_time" name="attendance_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_action">Action *</label>
+                    <select id="edit_action" name="action" required>
+                        <option value="check-in">Check-In</option>
+                        <option value="check-out">Check-Out</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeEditAttendanceModal()" class="btn btn-outline">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function deleteAttendanceRecord(attendanceId) {
+            if (!attendanceId) {
+                alert('Invalid attendance record ID');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to delete this attendance record? This action cannot be undone.')) {
+                return;
+            }
+            
+            fetch(`/attendance/${attendanceId}/delete`, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert('Attendance record deleted successfully');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    console.error('Error deleting attendance record:', err);
+                    alert('Error deleting attendance record: ' + err.message);
+                });
+        }
+
+        function editAttendanceRecord(attendanceId) {
+            if (!attendanceId) {
+                alert('Invalid attendance record ID');
+                return;
+            }
+            
+            // Fetch record details and populate form
+            fetch(`/api/attendance/${attendanceId}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(record => {
+                    if (!record || !record.event_time) {
+                        alert('Invalid record data received');
+                        return;
+                    }
+                    
+                    // Handle timezone-aware datetime
+                    let eventTime;
+                    if (typeof record.event_time === 'string') {
+                        eventTime = new Date(record.event_time);
+                    } else {
+                        eventTime = new Date(record.event_time);
+                    }
+                    
+                    // Format date and time
+                    const dateStr = eventTime.toISOString().split('T')[0];
+                    const timeStr = eventTime.toTimeString().slice(0, 5);
+                    
+                    document.getElementById('editAttendanceId').value = attendanceId;
+                    document.getElementById('edit_attendance_date').value = dateStr;
+                    document.getElementById('edit_attendance_time').value = timeStr;
+                    document.getElementById('edit_action').value = record.action || 'check-in';
+                    document.getElementById('editAttendanceForm').action = `/attendance/${attendanceId}/update`;
+                    document.getElementById('editAttendanceModal').classList.remove('hidden');
+                })
+                .catch(err => {
+                    console.error('Error loading attendance record:', err);
+                    alert('Error loading attendance record: ' + err.message);
+                });
+        }
+
+        function closeEditAttendanceModal() {
+            document.getElementById('editAttendanceModal').classList.add('hidden');
+        }
+
+        function handleEditFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const attendanceId = document.getElementById('editAttendanceId').value;
+            
+            if (!attendanceId) {
+                alert('Invalid attendance record ID');
+                return;
+            }
+            
+            fetch(`/attendance/${attendanceId}/update`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (res.redirected) {
+                    window.location.href = res.url;
+                } else if (res.ok) {
+                    return res.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch {
+                            return { success: true };
+                        }
+                    });
+                } else {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+            })
+            .then(data => {
+                if (data && data.success !== false) {
+                    alert('Attendance record updated successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to update attendance record'));
+                }
+            })
+            .catch(err => {
+                console.error('Error updating attendance record:', err);
+                alert('Error updating attendance record: ' + err.message);
+            });
+        }
+
+        // Modal styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .modal {
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .modal.hidden {
+                display: none !important;
+            }
+            .modal-content {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 500px;
+                width: 90%;
+            }
+            .form-group {
+                margin-bottom: 15px;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 600;
+            }
+            .form-group input, .form-group select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+            .modal-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                margin-top: 20px;
+            }
+            .btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .btn-primary {
+                background: #3498db;
+                color: white;
+            }
+            .btn-outline {
+                background: #ecf0f1;
+                color: #333;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

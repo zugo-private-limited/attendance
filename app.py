@@ -24,6 +24,7 @@ from bills_services import (
     fetch_invoice_by_id,
     fetch_invoice_by_number,
     fetch_all_invoices,
+    update_invoice,
     update_invoice_status,
     delete_invoice,
     create_gst_bill,
@@ -44,7 +45,8 @@ from employees import users as static_users
 from data import (
     get_db_connection, fetch_attendance_for_today, fetch_all_employees, fetch_employee_by_email,
     submit_employee_comment, get_employee_comments, get_unread_comments_for_hr, 
-    get_all_comments_for_hr, mark_comment_as_read, get_unread_comment_count
+    get_all_comments_for_hr, mark_comment_as_read, get_unread_comment_count,
+    fetch_attendance_for_period
 )
 from services import calculate_working_days_and_leaves_for_employee, is_at_office, mark_leaves_for_absent_employees
 from schema import initialize_database_schema 
@@ -751,6 +753,211 @@ async def manual_attendance(
             status_code=status.HTTP_303_SEE_OTHER
         )
 
+@app.get("/api/attendance/{attendance_id}", summary="Get attendance record by ID")
+async def get_attendance_record(attendance_id: int, request: Request, db = Depends(get_db_connection)):
+    """Get a single attendance record (HR only)"""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute("SELECT * FROM attendance WHERE id = %s", (attendance_id,))
+    record = cursor.fetchone()
+    cursor.close()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+    
+    return record
+
+
+@app.get("/employee/{email}/attendance-report", response_class=HTMLResponse, summary="View employee attendance report")
+async def view_employee_attendance_report(
+    email: str,
+    request: Request,
+    period: str = "30",
+    db = Depends(get_db_connection)
+):
+    """View attendance report for a specific employee (HR only)"""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    employee = fetch_employee_by_email(db, email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Map period parameter to days
+    period_map = {"30": 30, "180": 180, "365": 365}
+    days = period_map.get(period, 30)
+    
+    # Fetch attendance records with IDs
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+    records = fetch_attendance_for_period(email, start_date, end_date)
+    
+    # Build report data and include attendance IDs
+    report_data, total_seconds = _build_report_for_user(db, email, days=days)
+    total_hours = total_seconds / 3600 if total_seconds else 0
+    
+    # Enhance report_data with attendance IDs for edit/delete
+    # Create a dictionary mapping dates to records for faster lookup
+    records_by_date = {}
+    for r in records:
+        # Handle both timezone-aware and naive datetime objects
+        event_time = r['event_time']
+        if hasattr(event_time, 'date'):
+            record_date = event_time.date()
+        else:
+            # If it's a string, parse it
+            if isinstance(event_time, str):
+                event_time = datetime.fromisoformat(event_time.replace('Z', '+00:00'))
+            record_date = event_time.date() if hasattr(event_time, 'date') else datetime.strptime(str(event_time), "%Y-%m-%d %H:%M:%S").date()
+        
+        date_str = record_date.isoformat()
+        if date_str not in records_by_date:
+            records_by_date[date_str] = []
+        records_by_date[date_str].append(r)
+    
+    # Now match report_data with records
+    for day_record in report_data:
+        day_str = day_record.get('day')
+        if day_str and day_str in records_by_date:
+            day_records = records_by_date[day_str]
+            # Get check-in and check-out IDs
+            check_in_rec = next((r for r in day_records if r.get('action') == 'check-in'), None)
+            check_out_rec = next((r for r in day_records if r.get('action') == 'check-out'), None)
+            day_record['check_in_id'] = check_in_rec.get('id') if check_in_rec and 'id' in check_in_rec else None
+            day_record['check_out_id'] = check_out_rec.get('id') if check_out_rec and 'id' in check_out_rec else None
+            # Use first record ID as primary for the row
+            day_record['attendance_id'] = day_records[0].get('id') if day_records and 'id' in day_records[0] else None
+    
+    return templates.TemplateResponse("employee_report.html", {
+        "request": request,
+        "employee": employee,
+        "records": sorted(records, key=lambda x: x["event_time"], reverse=True),
+        "report_data": report_data,
+        "total_working_hours": f"{total_hours:.2f}",
+        "period": period,
+        "is_hr": True
+    })
+
+
+@app.post("/attendance/{attendance_id}/delete", summary="Delete attendance record")
+async def delete_attendance_record(
+    attendance_id: int,
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Delete an attendance record (HR only)"""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        return {"success": False, "message": "Unauthorized"}
+    
+    try:
+        cursor = db.cursor()
+        # Get the record first to check if it's a check-in (to update total_working)
+        cursor.execute("SELECT user_email, action FROM attendance WHERE id = %s", (attendance_id,))
+        record = cursor.fetchone()
+        
+        if not record:
+            cursor.close()
+            return {"success": False, "message": "Attendance record not found"}
+        
+        user_email_emp, action = record
+        
+        # Delete the record
+        cursor.execute("DELETE FROM attendance WHERE id = %s", (attendance_id,))
+        
+        # If it was a check-in, decrement total_working
+        if action == "check-in":
+            cursor.execute(
+                """UPDATE employee_details 
+                   SET total_working = GREATEST(total_working - 1, 0)
+                   WHERE email = %s""",
+                (user_email_emp,)
+            )
+        
+        db.commit()
+        cursor.close()
+        
+        return {"success": True, "message": "Attendance record deleted successfully"}
+    except Exception as e:
+        logging.error(f"Error deleting attendance record: {str(e)}", exc_info=True)
+        return {"success": False, "message": f"Failed to delete attendance record: {str(e)}"}
+
+
+@app.post("/attendance/{attendance_id}/update", summary="Update attendance record")
+async def update_attendance_record(
+    attendance_id: int,
+    request: Request,
+    attendance_date: str = Form(...),
+    attendance_time: str = Form(...),
+    action: str = Form(...),
+    db = Depends(get_db_connection)
+):
+    """Update an attendance record (HR only)"""
+    user_email = request.session.get("user_email")
+    if not user_email or user_email != config.HR_EMAIL:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    try:
+        # Get existing record
+        cursor = db.cursor()
+        cursor.execute("SELECT user_email, action FROM attendance WHERE id = %s", (attendance_id,))
+        record = cursor.fetchone()
+        
+        if not record:
+            cursor.close()
+            return RedirectResponse(
+                url="/hr-management?error=Attendance record not found",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+        
+        user_email_emp, old_action = record
+        
+        # Parse new datetime
+        event_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
+        event_time = datetime.strptime(attendance_time, "%H:%M").time()
+        event_datetime = datetime.combine(event_date, event_time)
+        
+        # Update the record
+        cursor.execute(
+            "UPDATE attendance SET event_time = %s, action = %s WHERE id = %s",
+            (event_datetime, action, attendance_id)
+        )
+        
+        # If action changed from check-in to check-out or vice versa, update total_working
+        if old_action == "check-in" and action == "check-out":
+            cursor.execute(
+                """UPDATE employee_details 
+                   SET total_working = GREATEST(total_working - 1, 0)
+                   WHERE email = %s""",
+                (user_email_emp,)
+            )
+        elif old_action == "check-out" and action == "check-in":
+            cursor.execute(
+                """UPDATE employee_details 
+                   SET total_working = total_working + 1
+                   WHERE email = %s""",
+                (user_email_emp,)
+            )
+        
+        db.commit()
+        cursor.close()
+        
+        return RedirectResponse(
+            url="/hr-management?success=Attendance record updated successfully",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        logging.error(f"Error updating attendance record: {str(e)}", exc_info=True)
+        return RedirectResponse(
+            url=f"/hr-management?error=Failed to update attendance: {str(e)}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+
 @app.get("/logout", summary="Log user out", name="logout")
 async def logout(request: Request):
     """Clears the user session."""
@@ -1307,6 +1514,22 @@ async def update_invoice_status_endpoint(
         raise HTTPException(status_code=400, detail=f"Failed to update invoice: {str(e)}")
 
 
+@app.post("/delete-invoice/{invoice_id}")
+async def delete_invoice_post_endpoint(
+    invoice_id: int,
+    hr_email: str = Depends(require_hr)
+):
+    """Delete an invoice (POST method for frontend compatibility)"""
+    try:
+        success = delete_invoice(invoice_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        return {"success": True, "message": "Invoice deleted"}
+    except Exception as e:
+        logging.error(f"Error deleting invoice: {str(e)}", exc_info=True)
+        return {"success": False, "message": f"Failed to delete invoice: {str(e)}"}
+
+
 @app.delete("/invoice/{invoice_id}")
 async def delete_invoice_endpoint(
     invoice_id: int,
@@ -1320,6 +1543,73 @@ async def delete_invoice_endpoint(
         return {"message": "Invoice deleted"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to delete invoice: {str(e)}")
+
+
+@app.post("/invoice/{invoice_id}/update")
+async def update_invoice_endpoint(
+    invoice_id: int,
+    request: Request,
+    invoice_no: str = Form(...),
+    invoice_date: str = Form(...),
+    vendor_name: str = Form(...),
+    vendor_gstin: Optional[str] = Form(None),
+    vendor_address: Optional[str] = Form(None),
+    customer_name: str = Form(...),
+    customer_gstin: Optional[str] = Form(None),
+    customer_address: Optional[str] = Form(None),
+    description: str = Form(...),
+    hsn_code: Optional[str] = Form(None),
+    uom: Optional[str] = Form(None),
+    quantity: str = Form(...),
+    rate: str = Form(...),
+    cgst: Optional[str] = Form("0"),
+    sgst: Optional[str] = Form("0"),
+    igst: Optional[str] = Form("0"),
+    notes: Optional[str] = Form(None),
+    invoice_status: Optional[str] = Form("draft"),
+    hr_email: str = Depends(require_hr)
+):
+    """Update an existing invoice"""
+    try:
+        # Convert string form values to floats, handling empty strings
+        def to_float(value: str, default: float = 0.0) -> float:
+            if not value or value.strip() == "":
+                return default
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return default
+        
+        invoice_data = {
+            "invoice_no": invoice_no,
+            "date": invoice_date,
+            "vendor_name": vendor_name,
+            "vendor_gstin": vendor_gstin,
+            "vendor_address": vendor_address,
+            "customer_name": customer_name,
+            "customer_gstin": customer_gstin,
+            "customer_address": customer_address,
+            "description": description,
+            "hsn_code": hsn_code,
+            "uom": uom,
+            "quantity": to_float(quantity, 1.0),
+            "rate": to_float(rate, 0.0),
+            "cgst": to_float(cgst, 0.0),
+            "sgst": to_float(sgst, 0.0),
+            "igst": to_float(igst, 0.0),
+            "notes": notes,
+            "status": invoice_status or "draft"
+        }
+        
+        success = update_invoice(invoice_id, invoice_data)
+        if not success:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+        return RedirectResponse(url=f"/invoice/{invoice_id}", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating invoice: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Failed to update invoice: {str(e)}")
 
 
 # =========================================================================

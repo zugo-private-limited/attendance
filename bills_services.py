@@ -148,6 +148,57 @@ def fetch_all_invoices(status: Optional[str] = None, limit: int = 100) -> List[D
         return []
 
 
+def update_invoice(invoice_id: int, invoice_data: dict) -> bool:
+    """
+    Update an existing invoice in the database
+    
+    Args:
+        invoice_id: ID of the invoice to update
+        invoice_data: Dictionary with invoice details to update
+        
+    Returns:
+        True if update was successful, False otherwise
+    """
+    conn = get_billing_db_connection()
+    try:
+        cursor = conn.cursor()
+        query = """
+            UPDATE invoices 
+            SET invoice_no = %s, date = %s, vendor_name = %s, vendor_gstin = %s, vendor_address = %s,
+                customer_name = %s, customer_gstin = %s, customer_address = %s, description = %s,
+                hsn_code = %s, uom = %s, quantity = %s, rate = %s, cgst = %s, sgst = %s, igst = %s,
+                status = %s, notes = %s, updated_at = NOW()
+            WHERE id = %s
+        """
+        values = (
+            invoice_data.get('invoice_no'),
+            invoice_data.get('date'),
+            invoice_data.get('vendor_name'),
+            invoice_data.get('vendor_gstin'),
+            invoice_data.get('vendor_address'),
+            invoice_data.get('customer_name'),
+            invoice_data.get('customer_gstin'),
+            invoice_data.get('customer_address'),
+            invoice_data.get('description'),
+            invoice_data.get('hsn_code'),
+            invoice_data.get('uom'),
+            invoice_data.get('quantity'),
+            invoice_data.get('rate'),
+            invoice_data.get('cgst', 0),
+            invoice_data.get('sgst', 0),
+            invoice_data.get('igst', 0),
+            invoice_data.get('status', 'draft'),
+            invoice_data.get('notes'),
+            invoice_id
+        )
+        cursor.execute(query, values)
+        conn.commit()
+        cursor.close()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
 def update_invoice_status(invoice_id: int, status: str) -> bool:
     """Update invoice status"""
     conn = get_billing_db_connection()

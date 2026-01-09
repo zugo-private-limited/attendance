@@ -449,6 +449,42 @@
         });
 
         // Invoice Modal Functions
+        // Handle form submission for create/edit
+        document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+            const formAction = document.getElementById('formAction').value;
+            const invoiceId = document.getElementById('invoiceId').value;
+            
+            if (formAction === 'edit' && invoiceId) {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                formData.append('invoice_status', document.getElementById('invoice_status').value);
+                
+                fetch(`/invoice/${invoiceId}/update`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => {
+                    if (res.redirected) {
+                        window.location.href = res.url;
+                    } else {
+                        return res.json();
+                    }
+                })
+                .then(data => {
+                    if (data && !data.success) {
+                        alert('Error updating invoice: ' + (data.message || 'Unknown error'));
+                    } else {
+                        window.location.reload();
+                    }
+                })
+                .catch(err => {
+                    alert('Error updating invoice: ' + err);
+                });
+            }
+            // If create, let form submit normally
+        });
+
         function openInvoiceModal() {
             const modal = document.getElementById('invoiceModal');
             const form = document.getElementById('invoiceForm');
@@ -456,6 +492,7 @@
             
             title.textContent = 'Create New Invoice';
             form.reset();
+            form.action = '/invoice/create';
             document.getElementById('formAction').value = 'create';
             document.getElementById('invoiceId').value = '';
             document.getElementById('invoice_date').valueAsDate = new Date();
@@ -478,9 +515,11 @@
             fetch(`/api/invoice/${invoiceId}`)
                 .then(res => res.json())
                 .then(invoice => {
+                    const form = document.getElementById('invoiceForm');
                     document.getElementById('modalTitle').textContent = 'Edit Invoice';
                     document.getElementById('formAction').value = 'edit';
                     document.getElementById('invoiceId').value = invoiceId;
+                    form.action = `/invoice/${invoiceId}/update`;
                     document.getElementById('invoice_no').value = invoice.invoice_no;
                     document.getElementById('invoice_date').value = invoice.date;
                     document.getElementById('customer_name').value = invoice.customer_name;
@@ -494,7 +533,7 @@
                     document.getElementById('cgst').value = invoice.cgst || 9;
                     document.getElementById('sgst').value = invoice.sgst || 9;
                     document.getElementById('igst').value = invoice.igst || 0;
-                    document.getElementById('invoice_status').value = invoice.status;
+                    document.getElementById('invoice_status').value = invoice.status || 'draft';
                     document.getElementById('notes').value = invoice.notes || '';
                     
                     document.getElementById('invoiceModal').classList.remove('hidden');
