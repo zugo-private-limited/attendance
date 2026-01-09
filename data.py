@@ -81,7 +81,7 @@ def fetch_attendance_for_today(db, user_email: str) -> List[Dict]:
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     today = date.today()
     cursor.execute(
-        "SELECT * FROM attendance WHERE user_email = %s AND DATE(event_time) = %s",
+        "SELECT * FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s",
         (user_email, today)
     )
     records = cursor.fetchall()
@@ -190,7 +190,7 @@ def fetch_attendance_for_period(user_email: str, start_date: date, end_date: dat
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """SELECT * FROM attendance 
-           WHERE user_email = %s AND DATE(event_time) BETWEEN %s AND %s
+           WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') BETWEEN %s AND %s
            ORDER BY event_time""",
         (user_email, start_date, end_date)
     )

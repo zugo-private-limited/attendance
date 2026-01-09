@@ -220,7 +220,7 @@ async def report(request: Request, period: str = "30", db = Depends(get_db_conne
     period_map = {"30": 30, "180": 180, "365": 365}
     days = period_map.get(period, 30)
     
-    report_data, total_seconds = _build_report_for_user(db, user_email, days=days)
+    report_data, total_seconds, leave_count = _build_report_for_user(db, user_email, days=days)
     total_hours = total_seconds / 3600 if total_seconds else 0
 
     is_hr = user_email == config.HR_EMAIL
@@ -248,7 +248,7 @@ async def download_report(request: Request, period: str = "30", db = Depends(get
     period_map = {"30": 30, "180": 180, "365": 365}
     days = period_map.get(period, 30)
     
-    report_data, _ = _build_report_for_user(db, user_email, days=days)
+    report_data, _, _ = _build_report_for_user(db, user_email, days=days)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -428,7 +428,7 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
             email = emp.get("email")
             if email:  
                 cursor.execute(
-                    "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time) = %s LIMIT 1",
+                    "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s LIMIT 1",
                     (email, today)
                 )
                 emp["present_today"] = bool(cursor.fetchone())
@@ -472,7 +472,7 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
         email = emp.get("email")
         if email: 
             cursor.execute(
-                "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time) = %s LIMIT 1",
+                "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s LIMIT 1",
                 (email, today)
             )
             emp["present_today"] = bool(cursor.fetchone())
@@ -797,7 +797,7 @@ async def view_employee_attendance_report(
     records = fetch_attendance_for_period(email, start_date, end_date)
     
     # Build report data and include attendance IDs
-    report_data, total_seconds = _build_report_for_user(db, email, days=days)
+    report_data, total_seconds, leave_count = _build_report_for_user(db, email, days=days)
     total_hours = total_seconds / 3600 if total_seconds else 0
     
     # Enhance report_data with attendance IDs for edit/delete
@@ -1025,15 +1025,18 @@ def _build_report_for_user(db, user_email, days: int = 30):
     # Use IST for date calculations
     end_date = get_ist_now()
     start_date = end_date - timedelta(days=days)
+    
+    # Convert start_date to UTC for database comparison
+    start_date_utc = start_date.astimezone(pytz.UTC)
 
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """
         SELECT event_time, action FROM attendance
-        WHERE user_email = %s AND event_time AT TIME ZONE 'Asia/Kolkata' >= %s
+        WHERE user_email = %s AND event_time >= %s
         ORDER BY event_time ASC
         """,
-        (user_email, start_date)
+        (user_email, start_date_utc)
     )
     rows = cursor.fetchall()
     cursor.close()
@@ -1047,30 +1050,54 @@ def _build_report_for_user(db, user_email, days: int = 30):
 
     report = []
     total_working_seconds = 0
-    for day, events in sorted(by_date.items()):
-        check_ins = [e["event_time"] for e in events if e["action"] == "check-in"]
-        check_outs = [e["event_time"] for e in events if e["action"] == "check-out"]
+    leave_count = 0
+    
+    # Generate all dates in the range
+    current_date = start_date.date()
+    end_date_only = end_date.date()
+    
+    while current_date <= end_date_only:
+        day_str = current_date.isoformat()
+        
+        if day_str in by_date:
+            # Date has attendance records
+            events = by_date[day_str]
+            check_ins = [e["event_time"] for e in events if e["action"] == "check-in"]
+            check_outs = [e["event_time"] for e in events if e["action"] == "check-out"]
 
-        check_in = min(check_ins).strftime("%I:%M %p") if check_ins else "-"
-        check_out = max(check_outs).strftime("%I:%M %p") if check_outs else "-"
+            check_in = min(check_ins).strftime("%I:%M %p") if check_ins else "-"
+            check_out = max(check_outs).strftime("%I:%M %p") if check_outs else "-"
 
-        seconds = 0
-        if check_ins and check_outs:
-            seconds = int((max(check_outs) - min(check_ins)).total_seconds())
-            total_working_seconds += seconds
+            seconds = 0
+            if check_ins and check_outs:
+                seconds = int((max(check_outs) - min(check_ins)).total_seconds())
+                total_working_seconds += seconds
 
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        total_str = f"{hours}h {minutes}m" if seconds else "-"
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            total_str = f"{hours}h {minutes}m" if seconds else "-"
 
-        report.append({
-            "day": day,
-            "check_in": check_in,
-            "check_out": check_out,
-            "total_hours": total_str
-        })
+            report.append({
+                "day": day_str,
+                "check_in": check_in,
+                "check_out": check_out,
+                "total_hours": total_str,
+                "status": "Present" if check_ins else "Partial"
+            })
+        else:
+            # Date has no attendance records - mark as leave/absent
+            leave_count += 1
+            report.append({
+                "day": day_str,
+                "check_in": "-",
+                "check_out": "-",
+                "total_hours": "-",
+                "status": "Absent/Leave"
+            })
+        
+        current_date += timedelta(days=1)
 
-    return report, total_working_seconds
+    return report, total_working_seconds, leave_count
 
 # ===========================================================================
 # EMPLOYEE COMMENTS & MESSAGING ENDPOINTS
