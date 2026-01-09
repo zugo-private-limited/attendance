@@ -220,7 +220,7 @@ async def report(request: Request, period: str = "30", db = Depends(get_db_conne
     period_map = {"30": 30, "180": 180, "365": 365}
     days = period_map.get(period, 30)
     
-    report_data, total_seconds, leave_count = _build_report_for_user(db, user_email, days=days)
+    report_data, total_seconds, leave_count, sunday_count = _build_report_for_user(db, user_email, days=days)
     total_hours = total_seconds / 3600 if total_seconds else 0
 
     is_hr = user_email == config.HR_EMAIL
@@ -248,7 +248,7 @@ async def download_report(request: Request, period: str = "30", db = Depends(get
     period_map = {"30": 30, "180": 180, "365": 365}
     days = period_map.get(period, 30)
     
-    report_data, _, _ = _build_report_for_user(db, user_email, days=days)
+    report_data, _, _, _ = _build_report_for_user(db, user_email, days=days)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -797,7 +797,7 @@ async def view_employee_attendance_report(
     records = fetch_attendance_for_period(email, start_date, end_date)
     
     # Build report data and include attendance IDs
-    report_data, total_seconds, leave_count = _build_report_for_user(db, email, days=days)
+    report_data, total_seconds, leave_count, sunday_count = _build_report_for_user(db, email, days=days)
     total_hours = total_seconds / 3600 if total_seconds else 0
     
     # Enhance report_data with attendance IDs for edit/delete
@@ -1051,6 +1051,7 @@ def _build_report_for_user(db, user_email, days: int = 30):
     report = []
     total_working_seconds = 0
     leave_count = 0
+    sunday_count = 0
     
     # Generate all dates in the range
     current_date = start_date.date()
@@ -1058,6 +1059,7 @@ def _build_report_for_user(db, user_email, days: int = 30):
     
     while current_date <= end_date_only:
         day_str = current_date.isoformat()
+        is_sunday = current_date.weekday() == 6  # 6 = Sunday in Python
         
         if day_str in by_date:
             # Date has attendance records
@@ -1076,28 +1078,49 @@ def _build_report_for_user(db, user_email, days: int = 30):
             hours = seconds // 3600
             minutes = (seconds % 3600) // 60
             total_str = f"{hours}h {minutes}m" if seconds else "-"
+            
+            # Determine status
+            if is_sunday:
+                status = "Sunday Work" if check_ins else "Sunday (Off)"
+                sunday_count += 1 if check_ins else 0
+            else:
+                status = "Present" if check_ins else "Partial"
 
             report.append({
                 "day": day_str,
                 "check_in": check_in,
                 "check_out": check_out,
                 "total_hours": total_str,
-                "status": "Present" if check_ins else "Partial"
+                "status": status,
+                "is_sunday": is_sunday
             })
         else:
-            # Date has no attendance records - mark as leave/absent
-            leave_count += 1
-            report.append({
-                "day": day_str,
-                "check_in": "-",
-                "check_out": "-",
-                "total_hours": "-",
-                "status": "Absent/Leave"
-            })
+            # Date has no attendance records
+            if is_sunday:
+                # Sunday with no attendance = office closed (don't count as leave)
+                report.append({
+                    "day": day_str,
+                    "check_in": "-",
+                    "check_out": "-",
+                    "total_hours": "-",
+                    "status": "Sunday (Off)",
+                    "is_sunday": True
+                })
+            else:
+                # Weekday with no attendance = leave/absent
+                leave_count += 1
+                report.append({
+                    "day": day_str,
+                    "check_in": "-",
+                    "check_out": "-",
+                    "total_hours": "-",
+                    "status": "Absent/Leave",
+                    "is_sunday": False
+                })
         
         current_date += timedelta(days=1)
 
-    return report, total_working_seconds, leave_count
+    return report, total_working_seconds, leave_count, sunday_count
 
 # ===========================================================================
 # EMPLOYEE COMMENTS & MESSAGING ENDPOINTS
