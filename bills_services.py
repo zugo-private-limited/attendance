@@ -3,33 +3,13 @@ Business Logic for Billing Module
 Handles invoicing operations, calculations, and database interactions
 """
 
-import psycopg2
-from psycopg2 import sql
 from datetime import datetime, date
 from typing import Optional, List, Dict
 from decimal import Decimal
 
 import config
 from bills_models import Invoice, GSTBill
-
-
-# =========================================================================
-# DATABASE CONNECTIONS
-# =========================================================================
-
-def get_billing_db_connection():
-    """Get a database connection for billing operations"""
-    try:
-        conn = psycopg2.connect(
-            host=config.DB_HOST,
-            port=config.DB_PORT,
-            user=config.DB_USER,
-            password=config.DB_PASSWORD,
-            database=config.DB_NAME
-        )
-        return conn
-    except psycopg2.Error as err:
-        raise Exception(f"Database connection failed: {err}")
+from data import get_db_connection as get_db_conn
 
 
 # =========================================================================
@@ -46,7 +26,7 @@ def create_invoice(invoice_data: dict) -> Dict:
     Returns:
         Dictionary with created invoice details including ID
     """
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         query = """
@@ -88,7 +68,7 @@ def create_invoice(invoice_data: dict) -> Dict:
 
 def fetch_invoice_by_id(invoice_id: int) -> Optional[Dict]:
     """Fetch invoice by ID"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM invoices WHERE id = %s", (invoice_id,))
@@ -102,7 +82,7 @@ def fetch_invoice_by_id(invoice_id: int) -> Optional[Dict]:
 
 def fetch_invoice_by_number(invoice_no: str) -> Optional[Dict]:
     """Fetch invoice by invoice number"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM invoices WHERE invoice_no = %s", (invoice_no,))
@@ -126,7 +106,7 @@ def fetch_all_invoices(status: Optional[str] = None, limit: int = 100) -> List[D
         List of invoice dictionaries
     """
     try:
-        conn = get_billing_db_connection()
+        conn = get_db_conn()
         try:
             cursor = conn.cursor()
             if status:
@@ -159,7 +139,7 @@ def update_invoice(invoice_id: int, invoice_data: dict) -> bool:
     Returns:
         True if update was successful, False otherwise
     """
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         query = """
@@ -201,7 +181,7 @@ def update_invoice(invoice_id: int, invoice_data: dict) -> bool:
 
 def update_invoice_status(invoice_id: int, status: str) -> bool:
     """Update invoice status"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -217,7 +197,7 @@ def update_invoice_status(invoice_id: int, status: str) -> bool:
 
 def delete_invoice(invoice_id: int) -> bool:
     """Delete invoice by ID"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM invoices WHERE id = %s", (invoice_id,))
@@ -242,7 +222,7 @@ def create_gst_bill(bill_data: dict) -> Dict:
     Returns:
         Dictionary with created bill details including ID
     """
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         query = """
@@ -287,7 +267,7 @@ def create_gst_bill(bill_data: dict) -> Dict:
 
 def fetch_gst_bill_by_id(bill_id: int) -> Optional[Dict]:
     """Fetch GST bill by ID"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM gst_bills WHERE id = %s", (bill_id,))
@@ -301,7 +281,7 @@ def fetch_gst_bill_by_id(bill_id: int) -> Optional[Dict]:
 
 def fetch_gst_bill_by_number(bill_no: str) -> Optional[Dict]:
     """Fetch GST bill by bill number"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM gst_bills WHERE bill_no = %s", (bill_no,))
@@ -325,7 +305,7 @@ def fetch_all_gst_bills(status: Optional[str] = None, limit: int = 100) -> List[
         List of GST bill dictionaries
     """
     try:
-        conn = get_billing_db_connection()
+        conn = get_db_conn()
         try:
             cursor = conn.cursor()
             if status:
@@ -349,7 +329,7 @@ def fetch_all_gst_bills(status: Optional[str] = None, limit: int = 100) -> List[
 
 def update_gst_bill_status(bill_id: int, status: str) -> bool:
     """Update GST bill status"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -365,7 +345,7 @@ def update_gst_bill_status(bill_id: int, status: str) -> bool:
 
 def delete_gst_bill(bill_id: int) -> bool:
     """Delete GST bill by ID"""
-    conn = get_billing_db_connection()
+    conn = get_db_conn()
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM gst_bills WHERE id = %s", (bill_id,))
@@ -388,7 +368,7 @@ def get_invoice_summary(start_date: date = None, end_date: date = None) -> Dict:
         Dictionary with summary statistics
     """
     try:
-        conn = get_billing_db_connection()
+        conn = get_db_conn()
         try:
             cursor = conn.cursor()
             
@@ -433,7 +413,7 @@ def get_gst_bill_summary(start_date: date = None, end_date: date = None) -> Dict
         Dictionary with summary statistics
     """
     try:
-        conn = get_billing_db_connection()
+        conn = get_db_conn()
         try:
             cursor = conn.cursor()
             

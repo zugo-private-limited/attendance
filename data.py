@@ -1,4 +1,7 @@
-from datetime import date
+from datetime import date, datetime
+import pytz
+IST = pytz.timezone('Asia/Kolkata')
+
 import psycopg2
 import psycopg2.extras
 from typing import Optional, List, Dict
@@ -78,11 +81,11 @@ def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
 
 
 def fetch_attendance_for_today(db, user_email: str) -> List[Dict]:
+    today = datetime.now(IST).date()  # ✅ CORRECT - Uses IST
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    today = date.today()
     cursor.execute(
         "SELECT * FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s",
-        (user_email, today)
+        (user_email, today)  # ✅ CORRECT - Matches SQL timezone
     )
     records = cursor.fetchall()
     cursor.close()

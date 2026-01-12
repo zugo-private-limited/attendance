@@ -40,7 +40,6 @@ from bills_schema import InvoiceCreate, InvoiceUpdate, GSTBillCreate, GSTBillUpd
 from bills_models import initialize_billing_schema
 
 #  --- Local Imports ---
-import config
 from employees import users as static_users 
 from data import (
     get_db_connection, fetch_attendance_for_today, fetch_all_employees, fetch_employee_by_email,
@@ -423,7 +422,7 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     
     try:
         cursor = db.cursor()
-        today = date.today()
+        today = get_ist_date()
         for emp in all_employees:
             email = emp.get("email")
             if email:  
@@ -467,7 +466,7 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
     )
     employees = cursor.fetchall()
     
-    today = date.today()
+    today = get_ist_date()
     for emp in employees:
         email = emp.get("email")
         if email: 

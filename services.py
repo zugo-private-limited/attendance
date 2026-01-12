@@ -88,7 +88,7 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
     If ref_date is not provided, uses today's date to determine the current period.
     """
     if ref_date is None:
-        ref_date = date.today()
+        ref_date = datetime.now(IST).date()  # ✅ FIXED - Uses IST
 
     start_period, end_period = get_attendance_period_dates(ref_date)
     
