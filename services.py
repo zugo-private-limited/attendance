@@ -151,7 +151,12 @@ def mark_leaves_for_absent_employees():
                 update_employee_leave(user_email, current_leave + 1)
                 print(f"⚠️ Marked ABSENT for {user_email} - No check-in for 3+ days")
             else:
-                checked_in_today = any(r["action"] == "check-in" for r in last_three_days_attendance if r["event_time"].date() == today)
+                checked_in_today = any(
+                    r["action"] == "check-in" and (
+                        (r["event_time"].astimezone(IST).date() if getattr(r["event_time"], 'tzinfo', None) else r["event_time"].replace(tzinfo=pytz.UTC).astimezone(IST).date())
+                    ) == today
+                    for r in last_three_days_attendance
+                )
                 if checked_in_today:
                     print(f"✓ {user_email} checked in today - Status: Present")
                 else:

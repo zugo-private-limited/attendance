@@ -423,12 +423,17 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     try:
         cursor = db.cursor()
         today = get_ist_date()
+        # Compute UTC range corresponding to IST 'today' to avoid timezone conversion issues
+        start_ist = datetime.combine(today, time.min).replace(tzinfo=IST)
+        end_ist = datetime.combine(today, time.max).replace(tzinfo=IST)
+        start_utc = start_ist.astimezone(pytz.UTC)
+        end_utc = end_ist.astimezone(pytz.UTC)
         for emp in all_employees:
             email = emp.get("email")
-            if email:  
+            if email:
                 cursor.execute(
-                    "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s LIMIT 1",
-                    (email, today)
+                    "SELECT 1 FROM attendance WHERE user_email = %s AND event_time >= %s AND event_time <= %s LIMIT 1",
+                    (email, start_utc, end_utc)
                 )
                 emp["present_today"] = bool(cursor.fetchone())
                 
@@ -437,7 +442,7 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
                     emp["salary"] = static_data.get("salary", "Not Set")
                     
         cursor.close()
-    except Exception:  
+    except Exception:
         for emp in all_employees:
             emp["present_today"] = False
             if is_hr:
@@ -467,12 +472,17 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
     employees = cursor.fetchall()
     
     today = get_ist_date()
+    # Compute UTC range corresponding to IST 'today'
+    start_ist = datetime.combine(today, time.min).replace(tzinfo=IST)
+    end_ist = datetime.combine(today, time.max).replace(tzinfo=IST)
+    start_utc = start_ist.astimezone(pytz.UTC)
+    end_utc = end_ist.astimezone(pytz.UTC)
     for emp in employees:
         email = emp.get("email")
-        if email: 
+        if email:
             cursor.execute(
-                "SELECT 1 FROM attendance WHERE user_email = %s AND DATE(event_time AT TIME ZONE 'Asia/Kolkata') = %s LIMIT 1",
-                (email, today)
+                "SELECT 1 FROM attendance WHERE user_email = %s AND event_time >= %s AND event_time <= %s LIMIT 1",
+                (email, start_utc, end_utc)
             )
             emp["present_today"] = bool(cursor.fetchone())
             
