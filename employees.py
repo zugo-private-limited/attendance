@@ -382,7 +382,7 @@ users = {
     'name': 'SARANYA',
     'email': 'saranyazugopvt@gmail.com',
     'photo': '',
-    'joining_date': '',
+    'joining_date': '20/01/2026',
     'employee_number': 'ZPL025',
     'phone': '',
     'parent_phone': '',
