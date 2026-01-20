@@ -356,10 +356,10 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    'sonthoshzugopvt@gmail.com': {
+    'santhoshzugopvt@gmail.com': {
      	'password':'Santhosh@123',
      	'name':'Santhosh Kumar S.',
-     	'email':'sonthoshzugopvt@gmail.com',
+     	'email':'santhoshzugopvt@gmail.com',
      	'photo':'',
      	'joining_date':'', 
      	'employee_number':'ZPL021', 
@@ -376,6 +376,26 @@ users = {
         "salary": "25000",
         "total_leave": 0,
         "total_working": 0
+},
+'saranyazugopvt@gmail.com': {
+    'password': 'Saranya@123',
+    'name': 'SARANYA',
+    'email': 'saranyazugopvt@gmail.com',
+    'photo': '',
+    'joining_date': '',
+    'employee_number': 'ZPL025',
+    'phone': '',
+    'parent_phone': '',
+    'dob': '',
+    'gender': '',
+    'job_role': '',
+    'native': '',
+    'address': '',
+    'aadhar': '',
+    'pan_card': '',
+    "bank_details": "",
+    "salary": "12000",
+    "total_leave": 0,
+    "total_working": 0
 }
-
 }
