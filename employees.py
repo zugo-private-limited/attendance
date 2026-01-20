@@ -188,27 +188,6 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    "pavithramzugopvt@gmail.com": {
-        "password": "Pavithra@123",
-        "name": "M. PAVITHRA",
-        "email": "pavithra.m2007@gmail.com",
-        "photo": "pavithra.jpeg",
-        "joining_date": "12/11/2025",
-        "employee_number": "ZPL013",
-        "phone": "7904928403",
-        "parent_phone": "8765432109",
-        "dob": "03/07/2004",
-        "gender": "Female",
-        "job_role": "Sales & Marketing",
-        "native": "Tamil Nadu",
-        "address": "Plot No. 45, Main Road, Coimbatore, Tamil Nadu - 641001",
-        "aadhar": "9876 5432 1098",
-        "pan_card": "HDQPP9823Q",
-        "bank_details": "Tamilnad Mercantile Bank, A/C No: 075100050318845, IFSC: TMBL0000075",
-        "salary": "15,000",
-        "total_leave": 0,
-        "total_working": 0
-    },
     "blessitazugopvt@gmail.com": {
         "password": "Blessita@123",
         "name": "BLESSITA A",
@@ -335,8 +314,8 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    'jaisreezugopvt@gmail.com': {
-        'password': 'Jaisree@123',
+    'amulyazugopvt@gmail.com': {
+        'password': 'Amulya@123',
         'name': 'JAISREE',
         'email': 'jaisreezugopvt@gmail.com',
         'photo': '',
@@ -356,8 +335,8 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    'bhavanithazugopvt@gmail.com': {
-     	'password':'Bhavanitha@123',
+    'bavanithazugopvt@gmail.com': {
+     	'password':'Bavanitha@123',
     	'name':'BHAVANITHA',
     	'email':'bhavanithazugopvt@gmail.com',
     	'photo':'',
