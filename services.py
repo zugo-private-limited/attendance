@@ -84,11 +84,14 @@ def get_attendance_period_dates(ref_date: date) -> tuple[date, date]:
 
 def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: date = None):
     """
-    Calculates working days and leaves for a user based on the attendance period (20th to 20th).
+    Calculates working days and leaves for a user based on the attendance period (21st to 20th).
     If ref_date is not provided, uses today's date to determine the current period.
+    
+    Returns:
+        tuple: (total_working_days, start_period, end_period)
     """
     if ref_date is None:
-        ref_date = datetime.now(IST).date()  # ✅ FIXED - Uses IST
+        ref_date = datetime.now(IST).date()  # ✅ Uses IST
 
     start_period, end_period = get_attendance_period_dates(ref_date)
     
@@ -102,10 +105,8 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
     
     total_working_days = len(checked_in_dates)
 
-    # Note: total_leave from DB should be updated by the scheduled task
-    # This function primarily *calculates* total_working for display.
-    # The actual 'total_leave' in DB is managed by the daily leave marking job.
-
+    # Note: This function ALWAYS recalculates from attendance records
+    # It ignores the stored total_working in DB and computes fresh from actual check-ins
     return total_working_days, start_period, end_period
 
 

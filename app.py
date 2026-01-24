@@ -493,6 +493,11 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             )
             comment_record = cursor.fetchone()
             emp["last_comment"] = comment_record.get("comment") if comment_record else None
+            
+            # ✅ FIXED: Calculate working days for the current salary period (21st-20th)
+            # This ensures all employees show the CORRECT count regardless of when they were added
+            calculated_working_days, period_start, period_end = calculate_working_days_and_leaves_for_employee(email, today)
+            emp["total_working"] = calculated_working_days
         
         static_data = static_users.get(emp['email'], {})
         emp['salary'] = static_data.get('salary', 'Not Set')
