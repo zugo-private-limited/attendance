@@ -293,8 +293,8 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    'amulyazugopvt@gmail.com': {
-        'password': 'Amulya@123',
+    'jaisreezugopvt@gmail.com': {
+        'password': 'Jaisree@123',
         'name': 'JAISREE',
         'email': 'jaisreezugopvt@gmail.com',
         'photo': '',
