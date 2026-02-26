@@ -335,27 +335,6 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-    # "bavanithazugopvt@gmail.com": {
-    #     "password": "Bavanitha@123",
-    #     "name": "BAVANITHA S",
-    #     "email": "bavanithazugopvt@gmail.com",
-    #     "photo": "",
-    #     "joining_date": "",
-    #     "employee_number": "ZPL027",
-    #     "phone": "",
-    #     "parent_phone": "",
-    #     "dob": "",
-    #     "gender": "",
-    #     "job_role": "",
-    #     "native": "",
-    #     "address": "",
-    #     "aadhar": "",
-    #     "pan_card": "",
-    #     "bank_details": "",
-    #     "salary": 12000,
-    #     "total_leave": 0,
-    #     "total_working": 0
-    # },
 "balachandarzugopvt@gmail.com": {
         "password": "Balachandran@123",
         "name": "BALACHANDRAN S",
@@ -418,5 +397,26 @@ users = {
         "salary": 15000,
         "total_leave": 0,
         "total_working": 0
-}
+},
+ "zugopvtsales.hr@gmail.com":{
+     "password": "Kiruthika@123",
+     "name" : "KIRUTHIKA VELLAICHAMY",
+     "email": "snehanzugopvt@gmail.com",
+        "photo": "",
+        "joining_date": "02/02/2026",
+        "employee_number": "ZPL024",
+        "phone": "9952261671",
+        "parent_phone": "9025471671",
+        "dob": "20/01/2002",
+        "gender": "Female",
+        "job_role": "Sales HR",     
+        "native": "Tirupur",
+        "address": "",
+        "aadhar": "",
+        "pan_card": "",
+        "bank_details": "",
+        "salary": 15000,
+        "total_leave": 0,
+        "total_working": 0
+ }
 }
