@@ -356,27 +356,6 @@ users = {
         "total_leave": 0,
         "total_working": 0
     },
-"bharathizugopvt@gmail.com": {
-        "password": "Bharathi@123",
-        "name": "BHARATHI S",
-        "email": "bharathizugopvt@gmail.com",   
-        "photo": "",
-        "joining_date": "02/02/2026",
-        "employee_number": "ZPL023",
-        "phone": "8072129484",
-        "parent_phone": " 9710444244",
-        "dob": "02/05/1994",
-        "gender": "Female",
-        "job_role": "Telecaller",     
-        "native": "Tirupur",
-        "address": "",
-        "aadhar": "",
-        "pan_card": "",
-        "bank_details": "",
-        "salary": 17000,
-        "total_leave": 0,
-        "total_working": 0
-},
 "snehanzugopvt@gmail.com": {
         "password": "Sneha@123",
         "name": "SNEHA N",
