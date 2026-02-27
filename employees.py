@@ -380,13 +380,13 @@ users = {
  "zugopvtsales.hr@gmail.com":{
      "password": "Kiruthika@123",
      "name" : "KIRUTHIKA VELLAICHAMY",
-     "email": "snehanzugopvt@gmail.com",
+     "email": "",
         "photo": "",
-        "joining_date": "02/02/2026",
-        "employee_number": "ZPL024",
-        "phone": "9952261671",
-        "parent_phone": "9025471671",
-        "dob": "20/01/2002",
+        "joining_date": "09/02/2026",
+        "employee_number": "ZPL025",
+        "phone":" ",
+        "parent_phone": " ",
+        "dob": " ",
         "gender": "Female",
         "job_role": "Sales HR",     
         "native": "Tirupur",
@@ -394,7 +394,7 @@ users = {
         "aadhar": "",
         "pan_card": "",
         "bank_details": "",
-        "salary": 15000,
+        "salary": 40000,
         "total_leave": 0,
         "total_working": 0
  }
