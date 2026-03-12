@@ -3,6 +3,8 @@ body {
     background: #f0f0f0;
     margin: 0;
     padding: 20px;
+    font-size: 15px;
+    line-height: 1.5;
 }
 
 .invoice-actions {
@@ -84,19 +86,24 @@ body {
 .invoice-container {
     background: white;
     width: 210mm; /* A4 Width */
-    min-height: 297mm;
+    height: auto;
     margin: auto;
-    padding: 10mm;
+    padding: 8mm;
     box-sizing: border-box;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    font-size: 11px; /* Small font like sample */
+    font-size: 13px; /* Increased font size */
     color: #000;
+    overflow: visible;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+    display: flex;
+    flex-direction: column;
 }
 
 h2 {
     text-align: center;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 20px;
     margin: 0 0 15px 0;
     text-transform: uppercase;
 }
@@ -104,7 +111,7 @@ h2 {
 .invoice-title {
     text-align: center;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 18px;
     margin-bottom: 5px;
 }
 
@@ -151,8 +158,9 @@ table {
 }
 
 td, th {
-    padding: 4px;
+    padding: 6px;
     vertical-align: top;
+    font-size: 14px;
 }
 
 /* Header Table */
@@ -189,13 +197,13 @@ td, th {
 /* Company Info Styles */
 .company-name {
     font-weight: bold;
-    font-size: 12px;
+    font-size: 16px;
     text-transform: uppercase;
 }
 
 .label {
     color: #333;
-    font-size: 10px;
+    font-size: 14px;
     font-weight: bold;
 }
 
@@ -261,12 +269,12 @@ td, th {
 
 /* Height utilities to push content down like the sample */
 .min-h-150 { 
-    min-height: 150px; 
+    min-height: 30px; 
     display: block;
 }
 
 .min-h-50 { 
-    min-height: 50px; 
+    min-height: 20px; 
     display: block;
 }
 
@@ -352,7 +360,8 @@ p strong {
     text-align: center;
     padding-top: 40px;
     padding-bottom: 10px;
-    font-size: 10px;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 /* Stamp Section */
@@ -372,22 +381,24 @@ p strong {
 /* Print Styles */
 @media print {
     body { 
-        background: white; 
-        padding: 0;
+        background: none;
         margin: 0;
+        padding: 0;
     }
 
     .invoice-actions { 
-        display: none !important; 
+        display: none; /* hide buttons on print */
     }
 
     .invoice-container {
-        width: 100%;
         box-shadow: none;
-        padding: 10mm;
+        border: 1px solid #000;
         margin: 0;
-        border: none;
-        min-height: auto;
+        width: 210mm;
+        min-height: 297mm;
+        padding: 8mm;
+        page-break-after: avoid;
+        page-break-inside: avoid;
     }
 
     /* Ensure background colors print */
@@ -408,18 +419,67 @@ p strong {
     }
 }
 
-/* Responsive Design */
-@media (max-width: 900px) {
-    .invoice-container {
-        width: 95%;
-        padding: 5mm;
-    }
+/* ---------- A4 print optimization ---------- */
+@page {
+  size: A4;
+  margin: 0; /* let .invoice-container manage padding */
+}
 
-    table {
-        font-size: 10px;
-    }
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
 
-    td, th {
-        padding: 3px;
-    }
+  body {
+    width: 210mm;
+    height: 297mm;
+  }
+
+  .invoice-actions {
+    display: none !important;
+  }
+
+  .invoice-container {
+    margin: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 8mm !important;
+    box-shadow: none !important;
+    font-size: 13px !important;      /* bigger text for print */
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .invoice-box, .item-table, .tax-table {
+    font-size: 12px !important;
+  }
+
+  .header-table td, .address-table td,
+  .items-table th, .items-table td {
+    padding: 5px !important;
+  }
+
+  .company-name {
+    font-size: 16px !important;
+  }
+
+  .invoice-title {
+    font-size: 16px !important;
+  }
+}
+
+/* desktop rendered screen version (optional increase) */
+.invoice-container {
+  font-size: 13px;           /* bigger display text */
+  min-height: 297mm;         /* keep full A4 body range */
+  padding: 8mm;              /* reduced white border */
+}
+
+.invoice-summary {
+  margin-top: auto;
 }

@@ -143,50 +143,58 @@
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.total_tax_amount) }}</td>
                 </tr>
                 <tr>
-                    <td colspan="7" class="text-right">Round Off</td>
+                    <td colspan="7" class="text-right">Round Off</td><br>
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.round_off) }}</td>
                 </tr>
                 <tr style="border-top: 1px solid #000; font-weight: bold;">
-                    <td colspan="7" class="text-right">Grand Total</td>
+                    <td colspan="7" class="text-right">Grand Total</td><br>
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.grand_total) }}</td>
                 </tr>
             </tbody>
         </table>
 
         <div style="border: 1px solid #000; border-top: none; padding: 5px;">
-            <div class="label">Amount Chargeable (in words)</div>
-            <div class="bold">INR <span id="totalAmountWords">Three Thousand Four Hundred</span> Only</div>
+            <div class="label">Amount Chargeable (in words)</div><br>
+            <div class="bold">INR <span id="totalAmountWords">Three Thousand Four Hundred</span> Only</div><br><br>
         </div>
 
-        <div style="border: 1px solid #000; border-top: none; padding: 5px;">
-            <div class="label">Tax Amount (in words) : INR <span id="taxAmountWords">Four Hundred Fifty</span> Only</div>
+        <div style="border: 1px solid #000; border-top: none; padding: 5px;"><br>
+            <div class="label">Tax Amount (in words) : INR <span id="taxAmountWords">Four Hundred Fifty</span> Only</div><br>
         </div>
 
         <!-- Footer Section: Declaration and Bank Details -->
         <div style="display: flex; border: 1px solid #000; border-top: none; padding: 10px; min-height: 120px;">
-            <!-- Left Side: Declaration -->
+            <!-- Left Side: Declaration -->                             
             <div style="width: 50%; padding-right: 10px; font-size: 10px; border-right: 1px solid #000;">
                 <div style="margin-bottom: 15px;">
-                    <u>Declaration</u><br>
-                    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+                    <u>Declaration</u><br><br>
+                    We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.<br><br>
+                    1. Zugo Private Limited is only responsible for digital marketing and lead generation. Zugo is not responsible for sales conversion.<br><br>
+                    2. This package price is only valid for one month from the date of billing.<br><br>
                 </div>
                 <!-- Customer Signature at bottom left -->
                 <div style="margin-top: 40px;">
-                    <div class="label"><b>Customer Signature</b></div>
+                    <div class="label"><b>Customer Signature</b></div><br><br><br><br>
                     <div style="height: 40px; border-bottom: 1px solid #000; margin-top: 5px;"></div>
                 </div>
             </div>
             
             <!-- Right Side: Bank Details -->
             <div style="width: 50%; padding-left: 10px; font-size: 10px;">
-                <div style="margin-bottom: 10px;">
-                    <u>Company's Bank Details</u><br>
-                    <div style="margin-top: 5px;">
-                        <div><b>Account Holders Name :</b> {{ bank_details.account_holder }}</div>
-                        <div><b>Bank Name :</b> {{ bank_details.bank_name }}</div>
-                        <div><b>A/c No :</b> {{ bank_details.account_number }}</div>
-                        <div><b>IFSC Code :</b> {{ bank_details.ifsc_code }}</div>
-                        <div><b>Branch :</b> {{ bank_details.branch }}</div>
+                <div style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; justify-content: space-between;">
+                    <div style="flex: 1;">
+                        <u>Company's Bank Details</u><br><br>
+                        <div style="margin-top: 5px;">
+                            <div><b>Account Holders Name :</b> {{ bank_details.account_holder }}</div>
+                            <div><b>Bank Name :</b> {{ bank_details.bank_name }}</div>
+                            <div><b>A/c No :</b> {{ bank_details.account_number }}</div>
+                            <div><b>IFSC Code :</b> {{ bank_details.ifsc_code }}</div>
+                            <div><b>Branch :</b> {{ bank_details.branch }}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center; width: 130px;">
+                        <div class="label" style="font-size: 11px;">Scan to Pay</div>
+                        <img src="{{ url_for('static', path='Zugo QR.jpeg') }}" alt="Zugo QR" style="width:120px; height:auto; margin-top:6px;" />
                     </div>
                 </div>
                 <!-- Company Signature at bottom right -->

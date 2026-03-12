@@ -1411,6 +1411,16 @@ async def get_billing(request: Request, hr_email: str = Depends(require_hr)):
         raise HTTPException(status_code=500, detail=f"Billing page error: {str(e)}")
 
 
+@app.get("/quotation", response_class=HTMLResponse, summary="Display quotation page")
+async def get_quotation(request: Request, hr_email: str = Depends(require_hr)):
+    """Display quotation page for creating or viewing quotations"""
+    from datetime import date
+    return templates.TemplateResponse("quotation.html", {
+        "request": request,
+        "quote_date": date.today().isoformat()
+    })
+
+
 @app.get("/invoices", response_class=HTMLResponse, summary="Display invoices page")
 async def get_invoices(request: Request, hr_email: str = Depends(require_hr)):
     """Display all invoices with filtering and search"""
