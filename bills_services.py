@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import config
 from bills_models import Invoice, GSTBill
-from data import get_db_connection as get_db_conn
+from data import get_db_conn
 
 
 # =========================================================================

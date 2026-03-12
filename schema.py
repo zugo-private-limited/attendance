@@ -38,7 +38,7 @@ def initialize_database_schema():
             password=config.DB_PASSWORD, 
             port=config.DB_PORT,
             database=config.DB_NAME
-        )
+                   )
         cursor = conn.cursor()
         
         # 1. Attendance Table - SEPARATE execute calls

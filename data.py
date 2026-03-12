@@ -16,7 +16,8 @@ from fastapi import HTTPException
 # ===========================================================================
 
 def get_db_connection():
-    """Dependency to get a database connection."""
+    """FastAPI dependency to get a database connection."""
+    conn = None
     try:
         conn = psycopg2.connect(
             host=config.DB_HOST,
@@ -29,8 +30,22 @@ def get_db_connection():
     except psycopg2.Error as err:
         raise HTTPException(status_code=500, detail=f"Database connection failed: {err}")
     finally:
-        if 'conn' in locals() and conn:
+        if conn:
             conn.close()
+
+
+def get_db_conn():
+    """Direct DB connection helper for non-dependency code paths."""
+    try:
+        return psycopg2.connect(
+            host=config.DB_HOST,
+            port=config.DB_PORT,
+            user=config.DB_USER,
+            password=config.DB_PASSWORD,
+            database=config.DB_NAME
+        )
+    except psycopg2.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {err}")
 
 
 # ===========================================================================
