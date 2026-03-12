@@ -7,9 +7,14 @@ from datetime import datetime, date
 from typing import Optional, List, Dict
 from decimal import Decimal
 
+import psycopg2
 import config
 from bills_models import Invoice, GSTBill
 from data import get_db_conn
+
+# Custom error types for clearer handling
+class DuplicateInvoiceNumberError(ValueError):
+    pass
 
 
 # =========================================================================
@@ -28,6 +33,11 @@ def create_invoice(invoice_data: dict) -> Dict:
     """
     conn = get_db_conn()
     try:
+        # Prevent duplicate invoice numbers by checking existing records first
+        existing = fetch_invoice_by_number(invoice_data.get('invoice_no'))
+        if existing:
+            raise DuplicateInvoiceNumberError("Invoice number already exists")
+
         cursor = conn.cursor()
         query = """
             INSERT INTO invoices 
@@ -57,7 +67,12 @@ def create_invoice(invoice_data: dict) -> Dict:
             invoice_data.get('status', 'draft'),
             invoice_data.get('notes'),
         )
-        cursor.execute(query, values)
+        try:
+            cursor.execute(query, values)
+        except psycopg2.errors.UniqueViolation:
+            conn.rollback()
+            raise DuplicateInvoiceNumberError("Invoice number already exists")
+
         invoice_id = cursor.fetchone()[0]
         conn.commit()
         cursor.close()

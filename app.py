@@ -35,6 +35,7 @@ from bills_services import (
     delete_gst_bill,
     get_invoice_summary,
     get_gst_bill_summary,
+    DuplicateInvoiceNumberError,
 )
 from bills_schema import InvoiceCreate, InvoiceUpdate, GSTBillCreate, GSTBillUpdate
 from bills_models import initialize_billing_schema
@@ -1454,8 +1455,13 @@ async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = 
     cgst_amount = subtotal * cgst / 100
     sgst_amount = subtotal * sgst / 100
     igst_amount = subtotal * igst / 100
-    total_amount = subtotal + cgst_amount + sgst_amount + igst_amount
-    
+    total_tax_amount = cgst_amount + sgst_amount + igst_amount
+    total_amount = subtotal + total_tax_amount
+
+    # Round-off to nearest 2 decimal places (for display and amount in words)
+    grand_total = round(total_amount, 2)
+    round_off = round(grand_total - total_amount, 2)
+
     invoice = {
         **invoice,
         "vendor_address": invoice.get("vendor_address") or "",
@@ -1475,7 +1481,10 @@ async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = 
         "cgst_amount": cgst_amount,
         "sgst_amount": sgst_amount,
         "igst_amount": igst_amount,
+        "total_tax_amount": total_tax_amount,
         "total_amount": total_amount,
+        "round_off": round_off,
+        "grand_total": grand_total,
     }
     
     # Bank details for invoice
@@ -1556,9 +1565,24 @@ async def create_new_invoice(
         
         result = create_invoice(invoice_data)
         return RedirectResponse(url=f"/invoice/{result['id']}", status_code=303)
+    except DuplicateInvoiceNumberError as e:
+        logging.warning(f"Duplicate invoice number when creating invoice: {invoice_no}")
+        raise HTTPException(
+            status_code=409,
+            detail="Invoice number already exists. Please use a different invoice number."
+        )
+    except psycopg2.errors.UniqueViolation:
+        logging.warning(f"Duplicate invoice number when creating invoice: {invoice_no}")
+        raise HTTPException(
+            status_code=409,
+            detail="Invoice number already exists. Please use a different invoice number."
+        )
+    except ValueError as e:
+        logging.warning(f"Validation error when creating invoice: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(f"Error creating invoice: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=400, detail=f"Failed to create invoice: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to create invoice. Please try again or contact support.")
 
 
 @app.post("/invoice/{invoice_id}/update-status")

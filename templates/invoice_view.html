@@ -129,6 +129,18 @@
                     <td colspan="3"></td>
                     <td class="text-right bold">₹ {{ "%.2f" | format(total_amount) }}</td>
                 </tr>
+                <tr>
+                    <td colspan="7" class="text-right">Total Tax Amount</td>
+                    <td class="text-right">₹ {{ "%.2f" | format(invoice.total_tax_amount) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-right">Round Off</td>
+                    <td class="text-right">₹ {{ "%.2f" | format(invoice.round_off) }}</td>
+                </tr>
+                <tr style="border-top: 1px solid #000; font-weight: bold;">
+                    <td colspan="7" class="text-right">Grand Total</td>
+                    <td class="text-right">₹ {{ "%.2f" | format(invoice.grand_total) }}</td>
+                </tr>
             </tbody>
         </table>
 
@@ -136,73 +148,6 @@
             <div class="label">Amount Chargeable (in words)</div>
             <div class="bold">INR <span id="totalAmountWords">Three Thousand Four Hundred</span> Only</div>
         </div>
-
-        <!-- Tax Breakdown Table -->
-        <table class="tax-table" style="margin-top: 0;">
-            <thead>
-                <tr>
-                    {% if invoice.igst %}
-                    <th rowspan="2">HSN/SAC</th>
-                    <th rowspan="2">Taxable Value</th>
-                    <th colspan="2">Integrated Tax</th>
-                    <th rowspan="2">Total Tax Amount</th>
-                    {% else %}
-                    <th rowspan="2">HSN/SAC</th>
-                    <th rowspan="2">Taxable Value</th>
-                    <th colspan="2">Central Tax</th>
-                    <th colspan="2">State Tax</th>
-                    <th rowspan="2">Total Tax Amount</th>
-                    {% endif %}
-                </tr>
-                <tr>
-                    {% if invoice.igst %}
-                    <th>Rate</th>
-                    <th>Amount</th>
-                    {% else %}
-                    <th>Rate</th>
-                    <th>Amount</th>
-                    <th>Rate</th>
-                    <th>Amount</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    {% if invoice.igst %}
-                    <td class="text-center">{{ invoice.hsn_code }}</td>
-                    <td>{{ "%.2f" | format(taxable_value) }}</td>
-                    <td>{{ invoice.igst }}%</td>
-                    <td>{{ "%.2f" | format(igst_amount) }}</td>
-                    <td>{{ "%.2f" | format(igst_amount) }}</td>
-                    {% else %}
-                    <td class="text-center">{{ invoice.hsn_code }}</td>
-                    <td>{{ "%.2f" | format(taxable_value) }}</td>
-                    <td>{{ invoice.cgst }}%</td>
-                    <td>{{ "%.2f" | format(cgst_amount) }}</td>
-                    <td>{{ invoice.sgst }}%</td>
-                    <td>{{ "%.2f" | format(sgst_amount) }}</td>
-                    <td>{{ "%.2f" | format(cgst_amount + sgst_amount) }}</td>
-                    {% endif %}
-                </tr>
-                <tr class="bold">
-                    {% if invoice.igst %}
-                    <td class="text-right">Total</td>
-                    <td>{{ "%.2f" | format(taxable_value) }}</td>
-                    <td></td>
-                    <td>{{ "%.2f" | format(igst_amount) }}</td>
-                    <td>{{ "%.2f" | format(igst_amount) }}</td>
-                    {% else %}
-                    <td class="text-right">Total</td>
-                    <td>{{ "%.2f" | format(taxable_value) }}</td>
-                    <td></td>
-                    <td>{{ "%.2f" | format(cgst_amount) }}</td>
-                    <td></td>
-                    <td>{{ "%.2f" | format(sgst_amount) }}</td>
-                    <td>{{ "%.2f" | format(cgst_amount + sgst_amount) }}</td>
-                    {% endif %}
-                </tr>
-            </tbody>
-        </table>
 
         <div style="border: 1px solid #000; border-top: none; padding: 5px;">
             <div class="label">Tax Amount (in words) : INR <span id="taxAmountWords">Four Hundred Fifty</span> Only</div>
@@ -326,9 +271,9 @@
             {% if invoice.igst %}
             const taxAmount = {{ (igst_amount) | round(2) }};
             {% else %}
-            const taxAmount = {{ (cgst_amount + sgst_amount) | round(2) }};
+            const taxAmount = {{ (invoice.total_tax_amount) | round(2) }};
             {% endif %}
-            const totalAmount = {{ (total_amount) | round(2) }};
+            const totalAmount = {{ (invoice.grand_total) | round(2) }};
             
             const taxAmountWordsSpan = document.getElementById('taxAmountWords');
             const totalAmountWordsSpan = document.getElementById('totalAmountWords');
