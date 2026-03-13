@@ -22,10 +22,37 @@ def test_imports():
         import uvicorn
         import psycopg2
         import jinja2
+        import pytz
+        from datetime import datetime, date, timedelta, timezone, time
         print("[OK] All imports successful")
         return True
     except ImportError as e:
         print(f"[FAIL] Import error: {e}")
+        return False
+
+def test_timezone_support():
+    """Test timezone configuration and functions."""
+    print("\nTesting timezone support...")
+    try:
+        import pytz
+        from datetime import datetime
+        
+        # Test IST timezone
+        IST = pytz.timezone('Asia/Kolkata')
+        now_ist = datetime.now(IST)
+        print(f"[OK] IST timezone working: {now_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        
+        # Test UTC timezone
+        now_utc = datetime.now(pytz.UTC)
+        print(f"[OK] UTC timezone working: {now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        
+        # Test timezone conversion
+        time_diff = (now_ist.utcoffset() - now_utc.utcoffset()).total_seconds() / 3600
+        print(f"[OK] Timezone offset: IST is UTC{time_diff:+.1f}")
+        
+        return True
+    except Exception as e:
+        print(f"[FAIL] Timezone error: {e}")
         return False
 
 def test_config():
@@ -54,7 +81,8 @@ def test_database_connection():
             port=config.DB_PORT,
             user=config.DB_USER,
             password=config.DB_PASSWORD,
-            database=config.DB_NAME
+            database=config.DB_NAME,
+            sslmode=config.DB_SSLMODE
         )
         conn.close()
         print("[OK] Database connection successful")
@@ -105,6 +133,7 @@ def main():
     
     results = []
     results.append(("Imports", test_imports()))
+    results.append(("Timezone Support", test_timezone_support()))
     results.append(("Configuration", test_config()))
     results.append(("Database Connection", test_database_connection()))
     results.append(("Static Files", test_static_files()))
