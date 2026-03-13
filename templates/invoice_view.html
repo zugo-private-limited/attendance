@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Invoice - {{ invoice.invoice_no }}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='invoice.css') }}" />
+    <style>
+        @page { size: A4 portrait; margin: 8mm; }
+        @media print {
+            body { margin: 0; padding: 0; width: 210mm; min-height: 297mm; }
+            .invoice-container { width: 210mm; box-shadow: none; margin: auto; padding: 8mm; }
+            .invoice-actions { display: none; }
+        }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>

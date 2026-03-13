@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <title>Quotation Generator</title>
 <style>
-body{font-family:Arial, sans-serif; margin:40px; color:#333;}
+@page { size: A4 portrait; margin: 8mm; }
+body{font-family:Arial, sans-serif; margin:40px; color:#333; width: 210mm; min-height: 297mm;}
+@media print {
+  body { margin: 0; width: 210mm; min-height: 297mm; }
+  #quotation{margin-top:32px; border-top:2px solid #000; padding-top:18px;}
+}
 .input-group{margin-bottom:8px;}
 input, textarea{width:100%; padding:8px; margin:4px 0; box-sizing:border-box;}
 button{padding:10px 20px; background:#007bff; color:#fff; border:none; cursor:pointer; border-radius:4px;}
