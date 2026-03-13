@@ -143,18 +143,18 @@
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.total_tax_amount) }}</td>
                 </tr>
                 <tr>
-                    <td colspan="7" class="text-right">Round Off</td><br>
+                    <td colspan="7" class="text-right">Round Off</td>
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.round_off) }}</td>
                 </tr>
                 <tr style="border-top: 1px solid #000; font-weight: bold;">
-                    <td colspan="7" class="text-right">Grand Total</td><br>
+                    <td colspan="7" class="text-right">Grand Total</td>
                     <td class="text-right">₹ {{ "%.2f" | format(invoice.grand_total) }}</td>
                 </tr>
             </tbody>
         </table>
 
         <div style="border: 1px solid #000; border-top: none; padding: 5px;">
-            <div class="label">Amount Chargeable (in words)</div><br>
+            <div class="label">Amount Chargeable (in words)</div>
             <div class="bold">INR <span id="totalAmountWords">Three Thousand Four Hundred</span> Only</div>
         </div>
 
@@ -174,7 +174,7 @@
                 </div>
                 <!-- Customer Signature at bottom left -->
                 <div style="margin-top: 40px;">
-                    <div class="label"><b>Customer Signature</b></div><br><br>
+                    <div class="label"><b>Customer Signature</b></div><br>
                     <div style="height: 40px; border-bottom: 1px solid #000; margin-top: 5px;"></div>
                 </div>
             </div>
@@ -183,7 +183,7 @@
             <div style="width: 50%; padding-left: 10px; font-size: 10px;">
                 <div style="margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px; justify-content: space-between;">
                     <div style="flex: 1;">
-                        <u>Company's Bank Details</u><br><br>
+                        <u>Company's Bank Details</u><br>
                         <div style="margin-top: 5px;">
                             <div><b>Account Holders Name :</b> {{ bank_details.account_holder }}</div>
                             <div><b>Bank Name :</b> {{ bank_details.bank_name }}</div>

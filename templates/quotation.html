@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quotation Generator</title>
+<style>
+body{font-family:Arial, sans-serif; margin:40px; color:#333;}
+.input-group{margin-bottom:8px;}
+input, textarea{width:100%; padding:8px; margin:4px 0; box-sizing:border-box;}
+button{padding:10px 20px; background:#007bff; color:#fff; border:none; cursor:pointer; border-radius:4px;}
+#quotation{margin-top:32px; border-top:2px solid #000; padding-top:18px;}
+table{width:100%; border-collapse:collapse; margin-top:16px;}
+th, td{border:1px solid #ddd; padding:8px; text-align:left;}
+.company-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.company-text{flex:1; text-align:center;}
+.company-text h1{margin:0; font-size:24px; font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div style="margin-bottom: 8px; font-size: 0.95rem; color: #444;">
+    <strong>Note:</strong> Use this quotation for client price checks; enter service, quantity, and rate to show total + GST.
+</div>
+
+<div class="company-header">
+    <div style="width:130px;"><img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-width:130px; max-height:70px;"></div>
+    <div class="company-text">
+      <h1>ZUGO PRIVATE LIMITED</h1>
+      11(3) P.N Road 4th Street, Tiruppur<br>
+      Phone: 95970 99949 | Email: zugoprivatelimited@gmail.com<br>
+      GSTIN: 33AACCZ6800E1ZM
+    </div>
+    <div style="width:160px; text-align:right;">
+      <strong>QUOTATION</strong><br>
+      Quotation No: <input id="quote-no" type="text" placeholder="Quote-1" style="width:130px;"><br>
+      Date: <input id="quote-date" type="date" value="{{ quote_date }}" style="width:130px;">
+    </div>
+</div>
+
+<div class="input-group">
+  <label>Customer Name</label><input id="customer-name" type="text" placeholder="Customer Name">
+</div>
+<div class="input-group">
+  <label>Business Name</label><input id="customer-business" type="text" placeholder="Business Name">
+</div>
+<div class="input-group">
+  <label>Phone</label><input id="customer-phone" type="text" placeholder="+91 ...">
+</div>
+<div class="input-group">
+  <label>Service Description</label><textarea id="service-desc" rows="3" placeholder="Details"></textarea>
+</div>
+<div class="input-group">
+  <label>Quantity</label><input id="service-qty" type="number" min="1" value="1" onchange="recalc()">
+</div>
+<div class="input-group">
+  <label>Rate</label><input id="service-rate" type="number" min="0" value="0" onchange="recalc()">
+</div>
+
+<button onclick="recalc()">Generate/Update Quotation</button>
+<button onclick="downloadQuotation()">Download Quotation</button>
+<button onclick="prepareEdit()">Edit Quotation</button>
+
+<div id="quotation"></div>
+
+<script>
+function fmt(x){return '₹ '+Number(x||0).toFixed(2);}
+function recalc(){
+  const name=document.getElementById('customer-name').value||'';
+  const business=document.getElementById('customer-business').value||'';
+  const phone=document.getElementById('customer-phone').value||'';
+  const service=document.getElementById('service-desc').value||'';
+  const qty=Number(document.getElementById('service-qty').value||0);
+  const rate=Number(document.getElementById('service-rate').value||0);
+  const amount=qty*rate;
+  const gst=amount*0.18;
+  const rawTotal=amount+gst;
+  const grand=Math.round(rawTotal*100)/100;
+  const roundoff=grand-rawTotal;
+  const qno=document.getElementById('quote-no').value||'Quote-1';
+  const qdate=document.getElementById('quote-date').value;
+  document.getElementById('quotation').innerHTML=
+  `<h2>Quotation</h2>
+   <p><strong>Quotation #</strong> ${qno}<br><strong>Date:</strong> ${qdate}</p>
+   <p><strong>To:</strong><br>${name}<br>${business}<br>${phone}</p>
+   <p>Dear Sir/Madam,<br>Thank you for your valuable inquiry. We are pleased to quote as below.</p>
+   <table><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+   <tbody>
+      <tr><td>1</td><td>${service.replace(/\n/g,'<br>')}</td><td>${qty}</td><td>${fmt(rate)}</td><td>${fmt(amount)}</td></tr>
+   </tbody></table>
+   <div style="margin-top:12px;">
+     <table><tbody>
+       <tr><td>Sub Total</td><td>${fmt(amount)}</td></tr>
+       <tr><td>GST (18%)</td><td>${fmt(gst)}</td></tr>
+       <tr><td>Round Off</td><td>${fmt(roundoff)}</td></tr>
+       <tr><th>Grand Total</th><th>${fmt(grand)}</th></tr>
+     </tbody></table>
+   </div>
+   <div style="margin-top:16px;">
+   <strong>Payment Instructions:</strong><br>
+   A/c: 925020039794750<br>IFSC: UTIB0002810 (AXIS BANK, Kumar Nagar)<br>UPI: 7200155539-3@ybl
+   </div>
+   <div style="margin-top:28px; text-align:right;">For ZUGO PRIVATE LIMITED<br><br>Authorized Signature</div>`;
+}
+
+function downloadQuotation() {
+  const quotationEl = document.getElementById('quotation');
+  const quoteHtml = quotationEl.innerHTML.trim();
+  if (!quoteHtml) {
+    alert('Please generate quotation first.');
+    return;
+  }
+
+  const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${document.getElementById('quote-no').value || 'Quotation'}</title><style>body{font-family:Arial, sans-serif; padding:20px; color:#333;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #ddd; padding:8px; text-align:left;}</style></head><body>${quoteHtml}</body></html>`;
+  const blob = new Blob([fullHtml], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${document.getElementById('quote-no').value || 'quotation'}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function prepareEdit() {
+  document.getElementById('customer-name').focus();
+  alert('You can edit fields and click Generate/Update Quotation again.');
+}
+
+recalc();
+</script>
+</body>
+</html>

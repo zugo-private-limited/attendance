@@ -62,6 +62,7 @@
                     <div class="buttons">
                         <button class="btn-green" onclick="openInvoiceModal()">Create Sales Invoice</button>
                         <button class="btn-blue" onclick="openGSTBillModal()">Create Purchase Invoice</button>
+                        <button class="btn-orange" onclick="window.location.href='/quotation'">Create Quotation</button>
                     </div>
                 </div>
 
@@ -378,6 +379,22 @@
 
         .btn-small.btn-danger:hover {
             background-color: #c0392b;
+        }
+
+        .btn-orange {
+            padding: 10px 20px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-orange:hover {
+            background-color: #d48806;
         }
 
         .form-row {
