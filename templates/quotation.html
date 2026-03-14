@@ -4,12 +4,7 @@
 <meta charset="UTF-8">
 <title>Quotation Generator</title>
 <style>
-@page { size: A4 portrait; margin: 8mm; }
-body{font-family:Arial, sans-serif; margin:40px; color:#333; width: 210mm; min-height: 297mm;}
-@media print {
-  body { margin: 0; width: 210mm; min-height: 297mm; }
-  #quotation{margin-top:32px; border-top:2px solid #000; padding-top:18px;}
-}
+body{font-family:Arial, sans-serif; margin:40px; color:#333;}
 .input-group{margin-bottom:8px;}
 input, textarea{width:100%; padding:8px; margin:4px 0; box-sizing:border-box;}
 button{padding:10px 20px; background:#007bff; color:#fff; border:none; cursor:pointer; border-radius:4px;}
@@ -84,7 +79,17 @@ function recalc(){
   const qno=document.getElementById('quote-no').value||'Quote-1';
   const qdate=document.getElementById('quote-date').value;
   document.getElementById('quotation').innerHTML=
-  `<h2>Quotation</h2>
+  `<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div style="width:120px; text-align:left;"><img src="{{ url_for('static', path='zugo logo.png') }}" alt="Zugo Logo" style="max-height:60px; max-width:120px;"></div>
+      <div style="text-align:center; flex:1;">
+          <div style="font-size:26px; font-weight:bold;">ZUGO PRIVATE LIMITED</div>
+          <div style="font-size:14px;">11(3) P.N Road 4th Street, Tiruppur</div>
+          <div style="font-size:14px;">Phone: 95970 99949 | Email: zugoprivatelimited@gmail.com</div>
+          <div style="font-size:14px;">GSTIN: 33AACCZ6800E1ZM</div>
+          <div style="font-size:16px; margin-top:4px;">Quotation</div>
+      </div>
+      <div style="width:120px"></div>
+   </div>
    <p><strong>Quotation #</strong> ${qno}<br><strong>Date:</strong> ${qdate}</p>
    <p><strong>To:</strong><br>${name}<br>${business}<br>${phone}</p>
    <p>Dear Sir/Madam,<br>Thank you for your valuable inquiry. We are pleased to quote as below.</p>
@@ -104,7 +109,18 @@ function recalc(){
    <strong>Payment Instructions:</strong><br>
    A/c: 925020039794750<br>IFSC: UTIB0002810 (AXIS BANK, Kumar Nagar)<br>UPI: 7200155539-3@ybl
    </div>
-   <div style="margin-top:28px; text-align:right;">For ZUGO PRIVATE LIMITED<br><br>Authorized Signature</div>`;
+   <div style="margin-top:16px; padding:10px; border:1px solid #000;">
+     <div style="font-weight:bold; margin-bottom:6px;">Declaration</div>
+     <div style="font-size:0.95rem; line-height:1.4;">
+       1. Zugo Private Limited is only responsible for digital marketing and lead generation. Zugo is not responsible for sales conversion.<br>
+       2. This package price is only valid for fifteen (15) days from the date of billing.
+     </div>
+   </div>
+   <div style="margin-top:28px; text-align:right;">
+     <div>For ZUGO PRIVATE LIMITED</div>
+     <img src="{{ url_for('static', path='E sign.png') }}" alt="Authorized Signature" style="max-width:220px; height:auto; margin-top:10px;" />
+     <div style="margin-top:6px; font-weight:bold;">Authorized Signature</div>
+   </div>`;
 }
 
 function downloadQuotation() {
