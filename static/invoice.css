@@ -435,7 +435,7 @@ p strong {
 
   body {
     width: 210mm;
-    height: 297mm;
+    height: auto;
   }
 
   .invoice-actions {
@@ -475,9 +475,16 @@ p strong {
 
 /* desktop rendered screen version (optional increase) */
 .invoice-container {
-  font-size: 13px;           /* bigger display text */
-  min-height: 297mm;         /* keep full A4 body range */
-  padding: 8mm;              /* reduced white border */
+  width: 210mm;
+  height: auto;
+  margin: auto;
+  padding: 8mm;
+  display: block;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.min-h-150 {
+  min-height: 0;
 }
 
 .invoice-summary {
