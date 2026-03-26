@@ -239,3 +239,141 @@ def reset_monthly_totals():
     finally:
         cursor.close()
         conn.close()
+
+
+# ===========================================================================
+# DATE PARSING & EVENT WISHES (BIRTHDAYS & ANNIVERSARIES)
+# ===========================================================================
+
+def parse_date(date_str: str) -> Optional[date]:
+    """
+    Parse date string in DD/MM/YYYY format to date object.
+    
+    Args:
+        date_str: Date string in format "DD/MM/YYYY"
+        
+    Returns:
+        date object or None if parsing fails
+    """
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, "%d/%m/%Y").date()
+    except (ValueError, TypeError):
+        return None
+
+
+def send_celebration_email(recipient_email: str, subject: str, message: str) -> bool:
+    """
+    Send celebration email (birthday/anniversary) to an employee.
+    
+    Args:
+        recipient_email: Employee's email
+        subject: Email subject
+        message: Email body/message
+        
+    Returns:
+        True if sent successfully, False otherwise
+    """
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = SMTP_USER
+        msg["To"] = recipient_email
+        msg.set_content(message)
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f"Failed to send email to {recipient_email}: {e}")
+        return False
+
+
+def send_event_wishes() -> None:
+    """
+    Send birthday and work anniversary wishes to employees.
+    Checks employee DOB and joining date against today's date.
+    Runs daily as a scheduled task.
+    """
+    try:
+        today = datetime.now(IST).date()
+        
+        # Get DB connection
+        conn = psycopg2.connect(
+            host=config.DB_HOST,
+            port=config.DB_PORT,
+            user=config.DB_USER,
+            password=config.DB_PASSWORD,
+            database=config.DB_NAME
+        )
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute(
+            "SELECT * FROM employee_details WHERE email != %s",
+            (HR_EMAIL,)
+        )
+        employees = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        print(f"\n{'='*70}")
+        print(f"🎉 Event Wishes Check - {today}")
+        print(f"{'='*70}")
+        
+        birthday_count = 0
+        anniversary_count = 0
+        
+        for emp in employees:
+            try:
+                emp_name = emp.get("name", "Unknown")
+                emp_email = emp.get("email", "")
+                
+                # Parse DOB and Joining Date
+                dob = parse_date(emp.get("dob"))
+                joining_date = parse_date(emp.get("joining_date"))
+                
+                # 🎂 BIRTHDAY CHECK
+                if dob and dob.day == today.day and dob.month == today.month:
+                    subject = f"🎂 Happy Birthday, {emp_name}!"
+                    message = (
+                        f"Dear {emp_name},\n\n"
+                        f"🎉 Wishing you a wonderful birthday!\n"
+                        f"Hope your day is filled with joy and celebrations.\n\n"
+                        f"Best wishes,\n"
+                        f"Zugo Attendance Team"
+                    )
+                    if send_celebration_email(emp_email, subject, message):
+                        print(f"✅ Birthday wish sent to {emp_name} ({emp_email})")
+                        birthday_count += 1
+                    else:
+                        print(f"❌ Failed to send birthday wish to {emp_name}")
+                
+                # 🎉 WORK ANNIVERSARY CHECK
+                if joining_date and joining_date.day == today.day and joining_date.month == today.month:
+                    years = today.year - joining_date.year
+                    subject = f"🎊 Happy Work Anniversary, {emp_name}!"
+                    message = (
+                        f"Dear {emp_name},\n\n"
+                        f"🎉 Congratulations on completing {years} year(s) with Zugo!\n"
+                        f"Thank you for your dedication and hard work.\n"
+                        f"Here's to many more successful years together!\n\n"
+                        f"Best wishes,\n"
+                        f"Zugo Attendance Team"
+                    )
+                    if send_celebration_email(emp_email, subject, message):
+                        print(f"✅ Anniversary wish sent to {emp_name} ({emp_email})")
+                        anniversary_count += 1
+                    else:
+                        print(f"❌ Failed to send anniversary wish to {emp_name}")
+                        
+            except Exception as e:
+                print(f"⚠️  Error processing {emp.get('name', 'Unknown')}: {e}")
+        
+        print(f"\n📊 Summary: {birthday_count} birthdays, {anniversary_count} anniversaries")
+        print(f"{'='*70}\n")
+        
+    except Exception as e:
+        print(f"❌ Error in send_event_wishes: {e}")

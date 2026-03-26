@@ -49,7 +49,7 @@ from data import (
     fetch_attendance_for_period, get_all_offices, get_office_by_id, get_user_office_id, 
     get_user_role, fetch_employees_by_office
 )
-from services import calculate_working_days_and_leaves_for_employee, is_at_office, mark_leaves_for_absent_employees
+from services import calculate_working_days_and_leaves_for_employee, is_at_office, mark_leaves_for_absent_employees, send_event_wishes
 from schema import initialize_database_schema 
 
 # ===========================================================================
@@ -75,16 +75,20 @@ async def lifespan(app: FastAPI):
     initialize_database_schema()
     initialize_billing_schema()  # Initialize billing tables
     
-    # Initialize APScheduler for daily absence marking
+    # Initialize APScheduler for scheduled tasks
     scheduler = BackgroundScheduler()
     
-    # Schedule job to run every day at 8 PM IST (which is 2:30 PM UTC, but we'll use a simpler hour)
-    # The job will check for employees who haven't clocked in for 3+ days
+    # 📍 Job 1: Check for employees who haven't clocked in for 3+ days (2:30 PM IST)
     scheduler.add_job(mark_leaves_for_absent_employees, 'cron', hour=14, minute=30, timezone='Asia/Kolkata')
+    
+    # 🎂 Job 2: Send birthday and anniversary wishes (9:00 AM IST)
+    scheduler.add_job(send_event_wishes, 'cron', hour=9, minute=0, timezone='Asia/Kolkata')
     
     try:
         scheduler.start()
-        print("✓ Scheduler started - Absence marking enabled")
+        print("✓ Scheduler started")
+        print("  • Absence marking: 2:30 PM IST daily")
+        print("  • Birthday & Anniversary wishes: 9:00 AM IST daily")
     except Exception as e:
         print(f"⚠️ Scheduler initialization failed: {e}")
     
