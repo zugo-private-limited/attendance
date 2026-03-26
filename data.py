@@ -52,7 +52,96 @@ def get_db_conn():
 # DATABASE UTILITY FUNCTIONS
 # ===========================================================================
 
+def get_all_offices(db) -> List[Dict]:
+    """Fetch all offices"""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute("SELECT * FROM offices ORDER BY id")
+    offices = cursor.fetchall()
+    cursor.close()
+    return offices or []
+
+
+def get_office_by_id(db, office_id: int) -> Optional[Dict]:
+    """Fetch office by ID"""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute("SELECT * FROM offices WHERE id = %s", (office_id,))
+    office = cursor.fetchone()
+    cursor.close()
+    return office
+
+
+def get_user_office_id(db, email: str) -> Optional[int]:
+    """Get the office_id for a user"""
+    cursor = db.cursor()
+    cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (email,))
+    result = cursor.fetchone()
+    cursor.close()
+    return result[0] if result else None
+
+
+def get_user_role(db, email: str) -> str:
+    """
+    Get user role:
+    - 'hq_admin' if email is HQ_EMAIL
+    - 'office_admin' if user is an office admin
+    - 'employee' otherwise
+    """
+    if email == config.HR_EMAIL:
+        return "hq_admin"
+    
+    cursor = db.cursor()
+    cursor.execute("SELECT job_role FROM employee_details WHERE email = %s", (email,))
+    result = cursor.fetchone()
+    cursor.close()
+    
+    if result and "Office Admin" in result[0]:
+        return "office_admin"
+    
+    return "employee"
+
+
+def fetch_employees_by_office(db, office_id: Optional[int]) -> List[Dict]:
+    """Fetch employees for a specific office (or all if office_id is None)"""
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    if office_id is None:
+        # Get all employees
+        cursor.execute("SELECT * FROM employee_details WHERE email != %s", (config.HR_EMAIL,))
+    else:
+        # Get employees for specific office
+        cursor.execute(
+            "SELECT * FROM employee_details WHERE office_id = %s AND email != %s",
+            (office_id, config.HR_EMAIL)
+        )
+    
+    employees = cursor.fetchall()
+    cursor.close()
+    
+    # Fill in missing fields from static data
+    for emp in employees:
+        email = emp.get("email")
+        if email and email in static_users:
+            static_user = static_users[email]
+            if not emp.get("phone"):
+                emp["phone"] = static_user.get("phone")
+            if not emp.get("parent_phone"):
+                emp["parent_phone"] = static_user.get("parent_phone")
+            if not emp.get("dob"):
+                emp["dob"] = static_user.get("dob")
+            if not emp.get("gender"):
+                emp["gender"] = static_user.get("gender")
+            if not emp.get("aadhar"):
+                emp["aadhar"] = static_user.get("aadhar")
+            if not emp.get("joining_date"):
+                emp["joining_date"] = static_user.get("joining_date")
+            if not emp.get("pan_card"):
+                emp["pan_card"] = static_user.get("pan_card")
+    
+    return employees
+
+
 def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
+    """Fetch a specific employee by email"""
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute("SELECT * FROM employee_details WHERE email = %s", (email,))
     employee = cursor.fetchone()

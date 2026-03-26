@@ -18,7 +18,34 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://...")
 
-# Office Location for Attendance
+# ===========================================================================
+# MULTI-OFFICE CONFIGURATION
+# ===========================================================================
+OFFICES = [
+    {
+        "name": "Tiruppur",
+        "admin_email": "zugoadmin1@gmail.com",
+        "lat": 11.2588,  # Tiruppur coordinates
+        "lon": 77.3412,
+        "radius": 500
+    },
+    {
+        "name": "CBE",
+        "admin_email": "zugoadmin2@gmail.com",
+        "lat": 11.0081,  # Coimbatore coordinates
+        "lon": 76.9069,
+        "radius": 500
+    },
+    {
+        "name": "CBE Main",
+        "admin_email": "zugoadmin3@gmail.com",
+        "lat": 11.0081,  # Coimbatore coordinates
+        "lon": 76.9069,
+        "radius": 500
+    }
+]
+
+# Default Office Location for Attendance (HQ office)
 OFFICE_LAT = 11.1205177
 OFFICE_LON = 77.3399277
 OFFICE_RADIUS_METERS = 500  # 0.5 km radius

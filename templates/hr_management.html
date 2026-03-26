@@ -21,10 +21,13 @@
             </div>
             <ul>
                 <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
-                <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight:  bold;">Overview</a></li>
+                <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
                 <li><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
-                <li class="active"><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+                <li class="active"><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
                 <li><a href="{{ url_for('billing') }}" style="color: #221f1eff; font-weight: bold;">Billing</a></li>
+                {% if user_email == 'zugopvtnetwork@gmail.com' %}
+                <li><a href="/account-management" style="color: #221f1eff; font-weight: bold;">Account Management</a></li>
+                {% endif %}
             </ul>
 
             <div class="help-center">                          
@@ -172,7 +175,10 @@
                         
                         <div class="form-group">
                             <label for="role">Role</label>
-                            <input type="text" id="role" name="job_role" value="Employee">
+                            <select id="role" name="job_role">
+                                <option value="Employee">Employee</option>
+                                <option value="Office Admin">Office Admin</option>
+                            </select>
                         </div>
 
                         <div class="form-group">
@@ -285,6 +291,61 @@
                     </form>
                 </div>
             </div>
+            
+            <!-- Account Management Modal (HQ Admin Only) -->
+            {% if user_email == 'zugopvtnetwork@gmail.com' %}
+            <div id="accountManagementModal" class="modal hidden">
+                <div class="modal-content">
+                    <span class="close" onclick="closeAccountManagementModal()">&times;</span>
+                    <h3>🏢 Add New Office Branch</h3>
+                    <form method="POST" action="/api/create-office">
+                        <div class="form-group">
+                            <label for="office_name">Office Name *</label>
+                            <input type="text" id="office_name" name="office_name" placeholder="e.g., Delhi Office" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="office_latitude">Latitude (Optional)</label>
+                            <input type="number" id="office_latitude" name="office_latitude" placeholder="e.g., 28.6139" step="0.0001" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="office_longitude">Longitude (Optional)</label>
+                            <input type="number" id="office_longitude" name="office_longitude" placeholder="e.g., 77.2090" step="0.0001" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="office_radius">Radius (meters)</label>
+                            <input type="number" id="office_radius" name="office_radius" value="500" />
+                        </div>
+                        
+                        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+                        
+                        <h4 style="margin: 10px 0; color: #333;">HR Admin Details</h4>
+                        
+                        <div class="form-group">
+                            <label for="admin_name">Admin Name *</label>
+                            <input type="text" id="admin_name" name="admin_name" placeholder="e.g., John Doe" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="admin_email">Admin Email *</label>
+                            <input type="email" id="admin_email" name="admin_email" placeholder="e.g., admin@office.com" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="admin_password">Admin Password *</label>
+                            <input type="password" id="admin_password" name="admin_password" placeholder="Min 6 characters" minlength="6" required />
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" onclick="closeAccountManagementModal()" class="btn btn-outline">Cancel</button>
+                            <button type="submit" class="btn btn-primary">✓ Create Office & Admin</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
         </main>
     </div>
@@ -766,7 +827,11 @@
                 })
                 .catch(error => console.error('Error loading comment count:', error));
         });
+
         {% endif %}
     </script>
+    <footer style="text-align: center; padding: 20px; background: #f8f9fa; color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee;">
+        ©  Zugo. All rights reserved.
+    </footer>
 </body>
 </html>

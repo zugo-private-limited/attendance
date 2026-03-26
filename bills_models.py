@@ -51,6 +51,7 @@ def initialize_billing_schema():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS invoices (
                 id SERIAL PRIMARY KEY,
+                office_id INT DEFAULT 1,
                 invoice_no VARCHAR(100) UNIQUE NOT NULL,
                 date DATE NOT NULL,
                 vendor_name VARCHAR(255) NOT NULL,
@@ -77,11 +78,13 @@ def initialize_billing_schema():
         # Create index for invoices
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(date);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_office_id ON invoices(office_id);")
 
         # Create GST Bills table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS gst_bills (
                 id SERIAL PRIMARY KEY,
+                office_id INT DEFAULT 1,
                 bill_no VARCHAR(100) UNIQUE NOT NULL,
                 date DATE NOT NULL,
                 vendor_name VARCHAR(255) NOT NULL,
@@ -103,6 +106,28 @@ def initialize_billing_schema():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_bill_no ON gst_bills(bill_no);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_date ON gst_bills(date);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_status ON gst_bills(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_office_id ON gst_bills(office_id);")
+
+        # Add office_id column to existing tables if they don't have it
+        try:
+            cursor.execute("ALTER TABLE invoices ADD COLUMN office_id INT DEFAULT 1;")
+            conn.commit()
+            print("Added office_id column to invoices table")
+        except psycopg2.errors.DuplicateColumn:
+            pass  # Column already exists
+        except psycopg2.Error as e:
+            print(f"Error adding office_id to invoices: {e}")
+            conn.rollback()
+        
+        try:
+            cursor.execute("ALTER TABLE gst_bills ADD COLUMN office_id INT DEFAULT 1;")
+            conn.commit()
+            print("Added office_id column to gst_bills table")
+        except psycopg2.errors.DuplicateColumn:
+            pass  # Column already exists
+        except psycopg2.Error as e:
+            print(f"Error adding office_id to gst_bills: {e}")
+            conn.rollback()
 
         conn.commit()
         cursor.close()

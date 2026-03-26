@@ -41,12 +41,31 @@ def initialize_database_schema():
                    )
         cursor = conn.cursor()
         
+        # 0. OFFICES TABLE - NEW (for multi-office support)
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS offices (
+                    id SERIAL PRIMARY KEY,
+                    office_name VARCHAR(255) NOT NULL,
+                    admin_email VARCHAR(255) NOT NULL,
+                    office_latitude NUMERIC(10,7) DEFAULT NULL,
+                    office_longitude NUMERIC(10,7) DEFAULT NULL,
+                    office_radius_meters INT DEFAULT 500,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            print("Created/verified offices table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating offices table: {e}")
+        
         # 1. Attendance Table - SEPARATE execute calls
         try:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS attendance (
                     id BIGSERIAL PRIMARY KEY,
                     user_email VARCHAR(255) NOT NULL,
+                    office_id INT DEFAULT 1,
                     action VARCHAR(50) NOT NULL,
                     event_time TIMESTAMP NOT NULL,
                     latitude NUMERIC(10,7) NULL,
@@ -71,6 +90,17 @@ def initialize_database_schema():
             if "already exists" not in str(e):
                 print(f"Info: {e}")
         
+        # Add office_id column to attendance if it doesn't exist
+        try:
+            cursor.execute("""
+                ALTER TABLE attendance 
+                ADD COLUMN IF NOT EXISTS office_id INT DEFAULT 1
+            """)
+            print("Verified office_id column in attendance table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
+        
         # Create index separately
         try:
             cursor.execute("""
@@ -90,6 +120,7 @@ def initialize_database_schema():
                     name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     password VARCHAR(255) NOT NULL,
+                    office_id INT DEFAULT 1,
                     photo VARCHAR(255) DEFAULT 'profile.jpg',
                     job_role VARCHAR(255) DEFAULT 'Employee',
                     phone VARCHAR(20),
@@ -146,6 +177,17 @@ def initialize_database_schema():
             if "already exists" not in str(e):
                 print(f"Info: {e}")
 
+        # Add office_id column for multi-office support
+        try:
+            cursor.execute("""
+                ALTER TABLE employee_details 
+                ADD COLUMN IF NOT EXISTS office_id INT DEFAULT 1
+            """)
+            print("Verified office_id column in employee_details table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
+
         # 3. Employee Comments/Messages Table (for employee-to-HR communication)
         try:
             cursor.execute("""
@@ -178,7 +220,50 @@ def initialize_database_schema():
 
         conn.commit()
 
-        # Seed HR Account
+        # Seed Offices - Create Main/HQ office first with id=1
+        hq_office_id = 1
+        try:
+            cursor_offices = conn.cursor()
+            
+            # Ensure Main HQ office exists with id=1
+            cursor_offices.execute(
+                "SELECT id FROM offices WHERE id = 1 LIMIT 1"
+            )
+            hq_row = cursor_offices.fetchone()
+            if not hq_row:
+                cursor_offices.execute(
+                    """INSERT INTO offices (id, office_name, admin_email, office_latitude, office_longitude, office_radius_meters)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (1, "Main HQ", config.HR_EMAIL, config.OFFICE_LAT, config.OFFICE_LON, 500)
+                )
+                conn.commit()
+                print(f"Inserted Main HQ office with id=1")
+            else:
+                print(f"✓ Main HQ office already exists with id=1")
+            
+            # Now seed custom offices (they will get auto-incremented IDs starting from 2)
+            offices_data = config.OFFICES
+            for office_info in offices_data:
+                cursor_offices.execute(
+                    "SELECT 1 FROM offices WHERE office_name = %s LIMIT 1",
+                    (office_info["name"],)
+                )
+                if not cursor_offices.fetchone():
+                    cursor_offices.execute(
+                        """INSERT INTO offices (office_name, admin_email, office_latitude, office_longitude, office_radius_meters)
+                           VALUES (%s, %s, %s, %s, %s)""",
+                        (office_info["name"], office_info["admin_email"], 
+                         office_info.get("lat"), office_info.get("lon"), 
+                         office_info.get("radius", 500))
+                    )
+                    conn.commit()
+                    print(f"Inserted office: {office_info['name']}")
+            
+            cursor_offices.close()
+        except Exception as _e:
+            print(f"Info: Office seeding: {_e}")
+
+        # Seed HR Account (HQ Admin - assign to Main HQ office id=1)
         try:
             cursor2 = conn.cursor()
             cursor2.execute("SELECT 1 FROM employee_details WHERE email = %s LIMIT 1", (config.HR_EMAIL,))
@@ -186,13 +271,22 @@ def initialize_database_schema():
             if not hr_row:
                 default_hr_password = os.getenv("HR_PASSWORD", "zugo@123")
                 cursor2.execute(
-                    "INSERT INTO employee_details (name, email, password, job_role) VALUES (%s, %s, %s, %s)",
-                    ("HR", config.HR_EMAIL, default_hr_password, "HR Manager")
+                    "INSERT INTO employee_details (name, email, password, job_role, office_id) VALUES (%s, %s, %s, %s, %s)",
+                    ("HR", config.HR_EMAIL, default_hr_password, "HQ Admin", hq_office_id)
                 )
                 conn.commit()
-                print(f"Inserted default HR account: {config.HR_EMAIL}")
+                print(f"Inserted default HR account: {config.HR_EMAIL} with office_id={hq_office_id}")
             else:
-                print(f"✓ HR account already exists: {config.HR_EMAIL}")
+                # Update existing HR account to ensure office_id=1 instead of NULL
+                cursor2.execute(
+                    "UPDATE employee_details SET office_id = %s WHERE email = %s",
+                    (hq_office_id, config.HR_EMAIL)
+                )
+                if cursor2.rowcount > 0:
+                    conn.commit()
+                    print(f"✓ Updated HR account office_id to {hq_office_id}: {config.HR_EMAIL}")
+                else:
+                    print(f"✓ HR account already exists: {config.HR_EMAIL}")
             cursor2.close()
         except psycopg2.IntegrityError as _e:
             conn.rollback()
@@ -200,6 +294,54 @@ def initialize_database_schema():
             cursor2.close()
         except Exception as _e:
             print(f"Warning: could not ensure HR account exists: {_e}")
+
+        # Seed Office Admin Accounts - Use actual office IDs from offices table
+        try:
+            cursor_admins = conn.cursor()
+            offices_data = config.OFFICES
+            
+            for office_info in offices_data:
+                admin_email = office_info["admin_email"]
+                office_name = office_info["name"]
+                
+                # Get the actual office_id from the offices table
+                cursor_admins.execute(
+                    "SELECT id FROM offices WHERE office_name = %s LIMIT 1",
+                    (office_name,)
+                )
+                office_row = cursor_admins.fetchone()
+                if not office_row:
+                    print(f"Warning: Office '{office_name}' not found in offices table, skipping admin creation")
+                    continue
+                
+                office_id = office_row[0]
+                
+                cursor_admins.execute(
+                    "SELECT 1 FROM employee_details WHERE email = %s LIMIT 1",
+                    (admin_email,)
+                )
+                if not cursor_admins.fetchone():
+                    default_admin_password = os.getenv("ADMIN_PASSWORD", "admin@123")
+                    cursor_admins.execute(
+                        """INSERT INTO employee_details (name, email, password, job_role, office_id)
+                           VALUES (%s, %s, %s, %s, %s)""",
+                        (f"Admin - {office_name}", admin_email, default_admin_password, "Office Admin", office_id)
+                    )
+                    conn.commit()
+                    print(f"Inserted office admin: {admin_email} for {office_name} (office_id={office_id})")
+                else:
+                    # Update existing admin to ensure office_id is correct
+                    cursor_admins.execute(
+                        "UPDATE employee_details SET office_id = %s WHERE email = %s AND job_role = 'Office Admin'",
+                        (office_id, admin_email)
+                    )
+                    if cursor_admins.rowcount > 0:
+                        conn.commit()
+                        print(f"✓ Updated office admin office_id to {office_id}: {admin_email}")
+            
+            cursor_admins.close()
+        except Exception as _e:
+            print(f"Info: Office admin seeding: {_e}")
 
         # Seed Static Employees
         try:
@@ -226,15 +368,17 @@ def initialize_database_schema():
                 native = user_data.get("native")
                 address = user_data.get("address")
                 job_role = user_data.get("job_role", "Employee")
+                office_id = user_data.get("office_id", 1)  # Default to office 1
                 
                 try:
                     cursor3.execute(
                         """INSERT INTO employee_details 
-                           (name, email, password, photo, phone, parent_phone, dob, gender, 
-                            employee_number, aadhar, joining_date, native, address, job_role)
-                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                        (name, email, password, photo, phone, parent_phone, dob, gender,
-                         employee_number, aadhar, joining_date, native, address, job_role)
+                           (name, email, password, office_id, photo, phone, parent_phone, dob, gender, 
+                            employee_number, aadhar, joining_date, native, address, job_role, salary, bank_details, pan_card)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (name, email, password, office_id, photo, phone, parent_phone, dob, gender,
+                         employee_number, aadhar, joining_date, native, address, job_role,
+                         user_data.get("salary"), user_data.get("bank_details"), user_data.get("pan_card"))
                     )
                     conn.commit()
                 except psycopg2.IntegrityError as ie:

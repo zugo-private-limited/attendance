@@ -46,7 +46,8 @@ from data import (
     get_db_connection, fetch_attendance_for_today, fetch_all_employees, fetch_employee_by_email,
     submit_employee_comment, get_employee_comments, get_unread_comments_for_hr, 
     get_all_comments_for_hr, mark_comment_as_read, get_unread_comment_count,
-    fetch_attendance_for_period
+    fetch_attendance_for_period, get_all_offices, get_office_by_id, get_user_office_id, 
+    get_user_role, fetch_employees_by_office
 )
 from services import calculate_working_days_and_leaves_for_employee, is_at_office, mark_leaves_for_absent_employees
 from schema import initialize_database_schema 
@@ -126,20 +127,39 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/", response_class=RedirectResponse)
-async def handle_login(request: Request, email: str = Form(...), password: str = Form(...), db = Depends(get_db_connection)):
+async def handle_login(
+    request: Request, 
+    email: str = Form(...), 
+    password: str = Form(...),
+    db = Depends(get_db_connection)
+):
     """Processes login form submission, authenticates user, and sets session."""
-    # Check if email is in allowed employees list
-    if email not in static_users:
+    # Check if email is in allowed employees list or is an office admin
+    employee = fetch_employee_by_email(db, email)
+    if not employee:
         return RedirectResponse(url="/?error=Access+Denied:+Not+an+authorized+employee", status_code=status.HTTP_303_SEE_OTHER)
     
-    employee = fetch_employee_by_email(db, email)
-    if employee and employee["password"] == password:
-        request.session["user_email"] = email
-        if email == config.HR_EMAIL:  
-            return RedirectResponse(url="/hr-management", status_code=status.HTTP_303_SEE_OTHER)
-        return RedirectResponse(url="/report", status_code=status.HTTP_303_SEE_OTHER)
+    if employee["password"] != password:
+        return RedirectResponse(url="/?error=Invalid+Credentials", status_code=status.HTTP_303_SEE_OTHER)
     
-    return RedirectResponse(url="/?error=Invalid+Credentials", status_code=status.HTTP_303_SEE_OTHER)
+    request.session["user_email"] = email
+    
+    # Determine user role and set office_id
+    user_role = get_user_role(db, email)
+    request.session["user_role"] = user_role
+    
+    # Set office_id based on user assignment
+    office_id = get_user_office_id(db, email)
+    if office_id:
+        request.session["office_id"] = office_id
+    
+    # Redirect based on role
+    if user_role == "hq_admin":
+        return RedirectResponse(url="/hr-management", status_code=status.HTTP_303_SEE_OTHER)
+    elif user_role == "office_admin":
+        return RedirectResponse(url="/hr-management", status_code=status.HTTP_303_SEE_OTHER)
+    else:
+        return RedirectResponse(url="/report", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/signup", response_class=HTMLResponse, summary="Handle new user registration")
 async def signup(
@@ -234,6 +254,7 @@ async def report(request: Request, period: str = "30", db = Depends(get_db_conne
         "error": request.query_params.get("error"),
         "success": request.query_params.get("success"),
         "is_hr": is_hr,
+        "user_email": user_email,
         "period": period
     }) 
 
@@ -284,12 +305,15 @@ async def dashboard_view(request: Request, db = Depends(get_db_connection)):
         request.session.clear()
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
-    is_hr = user_email == config.HR_EMAIL
+    user_role = get_user_role(db, user_email)
+    is_hr = user_role in ["hq_admin", "office_admin"]
 
     return templates.TemplateResponse("dashboard.html", {
         "request":  request,
         "user": user,
         "is_hr":  is_hr,
+        "user_role": user_role,
+        "user_email": user_email,
         "error": request.query_params.get("error"),
         "success": request.query_params.get("success")
     })
@@ -412,19 +436,27 @@ async def handle_attendance(
 
 @app.get("/employees", response_class=HTMLResponse, name="employees_page", summary="Display employees list")
 async def employees_page(request: Request, db = Depends(get_db_connection)):
-    """Display list of all employees."""
+    """Display list of employees for current office."""
     user_email = request.session.get("user_email")
+    office_id = request.session.get("office_id")
+    user_role = request.session.get("user_role", "employee")
+    
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
         
-    is_hr = user_email == config.HR_EMAIL
-    all_employees = fetch_all_employees(db)
+    is_hr = user_role in ["hq_admin", "office_admin"]
+    
+    # Get employees for this office
+    all_employees = fetch_employees_by_office(db, office_id)
     all_employees = [emp for emp in all_employees if emp.get("email") != config.HR_EMAIL]
+    
+    # Get current office name
+    current_office = get_office_by_id(db, office_id) if office_id else None
+    office_name = current_office["office_name"] if current_office else "All Offices"
     
     try:
         cursor = db.cursor()
         today = get_ist_date()
-        # Compute UTC range corresponding to IST 'today' to avoid timezone conversion issues
         start_ist = datetime.combine(today, time.min).replace(tzinfo=IST)
         end_ist = datetime.combine(today, time.max).replace(tzinfo=IST)
         start_utc = start_ist.astimezone(pytz.UTC)
@@ -452,32 +484,40 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     return templates.TemplateResponse("employee_list.html", {
         "request": request,
         "employees": all_employees,
-        "is_hr": is_hr
+        "is_hr": is_hr,
+        "user_email": user_email,
+        "office_name": office_name
     })
 
 @app.get("/hr-management", response_class=HTMLResponse, name="hr_management", summary="HR Management Dashboard")
 async def hr_management(request: Request, db = Depends(get_db_connection)):
-    """HR-only page showing all employees with details."""
+    """HR-only page showing employees for the current office."""
     user_email = request.session.get("user_email")
+    office_id = request.session.get("office_id")
+    user_role = request.session.get("user_role", "employee")
+    
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
-    if user_email != config.HR_EMAIL:
+    # Only HQ admin and office admin can access
+    if user_role not in ["hq_admin", "office_admin"]:
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     
-    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cursor.execute(
-        "SELECT * FROM employee_details WHERE email != %s ORDER BY name ASC",      
-        (config.HR_EMAIL,)
-    )
-    employees = cursor.fetchall()
+    # Get employees for this office
+    employees = fetch_employees_by_office(db, office_id)
+    
+    # Get current office name and all offices for dropdown
+    current_office = get_office_by_id(db, office_id) if office_id else None
+    office_name = current_office["office_name"] if current_office else "All Offices"
+    all_offices = get_all_offices(db) if user_role == "hq_admin" else [current_office] if current_office else []
     
     today = get_ist_date()
-    # Compute UTC range corresponding to IST 'today'
     start_ist = datetime.combine(today, time.min).replace(tzinfo=IST)
     end_ist = datetime.combine(today, time.max).replace(tzinfo=IST)
     start_utc = start_ist.astimezone(pytz.UTC)
     end_utc = end_ist.astimezone(pytz.UTC)
+    
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     for emp in employees:
         email = emp.get("email")
         if email:
@@ -495,8 +535,6 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             comment_record = cursor.fetchone()
             emp["last_comment"] = comment_record.get("comment") if comment_record else None
             
-            # ✅ FIXED: Calculate working days for the current salary period (21st-20th)
-            # This ensures all employees show the CORRECT count regardless of when they were added
             calculated_working_days, period_start, period_end = calculate_working_days_and_leaves_for_employee(email, today)
             emp["total_working"] = calculated_working_days
         
@@ -509,7 +547,32 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
         "request": request,
         "employees": employees,
         "is_hr": True,
-        "user_email": user_email
+        "user_email": user_email,
+        "office_name": office_name,
+        "all_offices": all_offices,
+        "current_office_id": office_id
+    })
+
+@app.get("/account-management", response_class=HTMLResponse, summary="Account Management - Add/Manage Offices")
+async def account_management(request: Request, db = Depends(get_db_connection)):
+    """Account management page for HQ admin to manage offices and admins."""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role", "employee")
+    
+    if not user_email:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Only HQ admin can access account management
+    if user_role != "hq_admin":
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Get all offices
+    offices = get_all_offices(db)
+    
+    return templates.TemplateResponse("account_management.html", {
+        "request": request,
+        "user_email": user_email,
+        "offices": offices
     })
 
 @app.get("/api/employee/{email}", summary="Get employee details by email")
@@ -527,19 +590,18 @@ async def get_employee_api(email: str, request: Request, db = Depends(get_db_con
 
 @app.get("/api/check-hr-access", summary="Check if user has HR access")
 async def check_hr_access(request: Request):
-    """Check if logged-in user has HR access."""
+    """Check if logged-in user has admin access."""
     user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role", "employee")
+    
     if not user_email:
         return {"is_hr": False, "message": "Not logged in"}
     
-    is_hr = user_email == config.HR_EMAIL
-    if is_hr:
-        return {"is_hr": True, "email": user_email, "message": "HR access granted"}
+    is_admin = user_role in ["hq_admin", "office_admin"]
+    if is_admin:
+        return {"is_hr": True, "email": user_email, "role": user_role, "message": "Admin access granted"}
     else:
-        return {"is_hr": False, "email": user_email, "message": "Regular employee access only"}
-        raise HTTPException(status_code=404, detail="Employee not found")
-    
-    return employee
+        return {"is_hr": False, "email": user_email, "role": user_role, "message": "Regular employee access only"}
 
 @app.post("/manage-employee", response_class=RedirectResponse, summary="Add or edit employee")
 async def manage_employee(
@@ -565,10 +627,17 @@ async def manage_employee(
     photo: UploadFile = File(None),
     db = Depends(get_db_connection)
 ):
-    """Handle adding or editing employees (HR only)."""
+    """Handle adding or editing employees (HR and Office Admins)."""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    office_id = request.session.get("office_id", 1)
+    user_role = request.session.get("user_role", "employee")
+    
+    # Only HQ admin and office admin can manage employees
+    if user_role not in ["hq_admin", "office_admin"]:
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Office admins can only create employees in their own office
+    # HQ admin can create employees in any office (defaults to 1)
     
     try:
         cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -615,9 +684,9 @@ async def manage_employee(
             
             cursor.execute(
                 """INSERT INTO employee_details 
-                   (name, email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, photo)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                (name, new_email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, final_photo)
+                   (name, email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, photo, office_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (name, new_email, password, phone, parent_phone, employee_number, job_role, dob, gender, joining_date, native, address, aadhar, pan_card, bank_details, salary, final_photo, office_id)
             )
             db.commit()
             
@@ -634,6 +703,14 @@ async def manage_employee(
             if cursor.fetchone():
                 cursor.close()
                 return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)
+            
+            # Office admins can only edit employees in their office
+            if user_role == "office_admin":
+                cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (email,))
+                emp_office = cursor.fetchone()
+                if not emp_office or emp_office.get('office_id') != office_id:
+                    cursor.close()
+                    return RedirectResponse(url="/hr-management?error=Cannot edit employees from other offices", status_code=status.HTTP_303_SEE_OTHER)
             
             # Get current photo if not updating
             if not photo_filename:
@@ -671,16 +748,29 @@ async def delete_employee(
     email: str = Form(...),
     db = Depends(get_db_connection)
 ):
-    """Delete an employee (HR only)."""
+    """Delete an employee (HR and Office Admins)."""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:  
+    office_id = request.session.get("office_id", 1)
+    user_role = request.session.get("user_role", "employee")
+    
+    # Only HQ admin and office admin can delete employees
+    if user_role not in ["hq_admin", "office_admin"]:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
     if email == config.HR_EMAIL:
         return RedirectResponse(url="/hr-management?error=Cannot delete HR account", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
-        cursor = db.cursor()
+        cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Office admins can only delete employees in their office
+        if user_role == "office_admin":
+            cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (email,))
+            emp = cursor.fetchone()
+            if not emp or emp.get('office_id') != office_id:
+                cursor.close()
+                return RedirectResponse(url="/hr-management?error=Cannot delete employees from other offices", status_code=status.HTTP_303_SEE_OTHER)
+        
         cursor.execute("DELETE FROM employee_details WHERE email = %s", (email,))
         db.commit()
         cursor.close()
@@ -700,16 +790,27 @@ async def manual_attendance(
     action: str = Form(...),
     db = Depends(get_db_connection)
 ):
-    """Allow HR to manually add attendance records for employees."""
+    """Allow HR and Office Admins to manually add attendance records for employees."""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    office_id = request.session.get("office_id", 1)
+    user_role = request.session.get("user_role", "employee")
+    
+    # Only HQ admin and office admin can add manual attendance
+    if user_role not in ["hq_admin", "office_admin"]:
+        return RedirectResponse(url="/?error=Access+Denied", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
         employee = fetch_employee_by_email(db, employee_email)
         if not employee:
             return RedirectResponse(
                 url="/hr-management?error=Employee not found",
+                status_code=status.HTTP_303_SEE_OTHER
+            )
+        
+        # Office admins can only add attendance for employees in their office
+        if user_role == "office_admin" and employee.get('office_id') != office_id:
+            return RedirectResponse(
+                url="/hr-management?error=Cannot add attendance for employees in other offices",
                 status_code=status.HTTP_303_SEE_OTHER
             )
         
@@ -822,12 +923,21 @@ async def view_employee_attendance_report(
         # Handle both timezone-aware and naive datetime objects
         event_time = r['event_time']
         if hasattr(event_time, 'date'):
-            record_date = event_time.date()
+            # Convert UTC to IST for date extraction (matching _build_report_for_user logic)
+            if event_time.tzinfo is None:
+                event_time_ist = IST.localize(event_time)
+            else:
+                event_time_ist = event_time.astimezone(IST)
+            record_date = event_time_ist.date()
         else:
             # If it's a string, parse it
             if isinstance(event_time, str):
                 event_time = datetime.fromisoformat(event_time.replace('Z', '+00:00'))
-            record_date = event_time.date() if hasattr(event_time, 'date') else datetime.strptime(str(event_time), "%Y-%m-%d %H:%M:%S").date()
+            if event_time.tzinfo is None:
+                event_time_ist = IST.localize(event_time)
+            else:
+                event_time_ist = event_time.astimezone(IST)
+            record_date = event_time_ist.date()
         
         date_str = record_date.isoformat()
         if date_str not in records_by_date:
@@ -971,6 +1081,177 @@ async def update_attendance_record(
             url=f"/hr-management?error=Failed to update attendance: {str(e)}",
             status_code=status.HTTP_303_SEE_OTHER
         )
+
+
+@app.post("/api/create-office", response_class=RedirectResponse, summary="Create new office and HR admin")
+async def create_office(
+    request: Request,
+    office_name: str = Form(...),
+    admin_name: str = Form(...),
+    admin_email: str = Form(...),
+    admin_password: str = Form(...),
+    office_latitude: Optional[float] = Form(None),
+    office_longitude: Optional[float] = Form(None),
+    office_radius: int = Form(default=500),
+    db = Depends(get_db_connection)
+):
+    """Create a new office and its admin account."""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role")
+    
+    # Only HQ admin can create offices
+    if not user_email or user_role != "hq_admin":
+        return RedirectResponse(url="/hr-management?error=Only HQ admin can create offices", status_code=status.HTTP_303_SEE_OTHER)
+    
+    try:
+        cursor = db.cursor()
+        
+        # 1. Create the office
+        cursor.execute(
+            """INSERT INTO offices (office_name, admin_email, office_latitude, office_longitude, office_radius_meters)
+               VALUES (%s, %s, %s, %s, %s)
+               RETURNING id""",
+            (office_name, admin_email, office_latitude, office_longitude, office_radius)
+        )
+        office_id = cursor.fetchone()[0]
+        db.commit()
+        
+        # 2. Create the HR/admin account for this office
+        cursor.execute(
+            """INSERT INTO employee_details (name, email, password, office_id, job_role)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (admin_name, admin_email, admin_password, office_id, "Office Admin")
+        )
+        db.commit()
+        cursor.close()
+        
+        # Redirect back with success message
+        return RedirectResponse(
+            url=f"/account-management?success=Office '{office_name}' created with admin '{admin_email}'",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except psycopg2.IntegrityError as e:
+        db.rollback()
+        cursor.close()
+        return RedirectResponse(
+            url="/account-management?error=Admin email already exists",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        return RedirectResponse(
+            url=f"/account-management?error=Error creating office: {str(e)}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+
+@app.post("/api/update-office", response_class=RedirectResponse, summary="Update office details")
+async def update_office(
+    request: Request,
+    office_id: int = Form(...),
+    office_name: str = Form(...),
+    office_latitude: Optional[float] = Form(None),
+    office_longitude: Optional[float] = Form(None),
+    office_radius: int = Form(default=500),
+    db = Depends(get_db_connection)
+):
+    """Update office details."""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role")
+    
+    # Only HQ admin can update offices
+    if not user_email or user_role != "hq_admin":
+        return RedirectResponse(url="/account-management?error=Only HQ admin can update offices", status_code=status.HTTP_303_SEE_OTHER)
+    
+    try:
+        cursor = db.cursor()
+        cursor.execute(
+            """UPDATE offices 
+               SET office_name = %s, office_latitude = %s, office_longitude = %s, office_radius_meters = %s
+               WHERE id = %s""",
+            (office_name, office_latitude, office_longitude, office_radius, office_id)
+        )
+        db.commit()
+        cursor.close()
+        
+        return RedirectResponse(
+            url=f"/account-management?success=Office '{office_name}' updated successfully",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        return RedirectResponse(
+            url=f"/account-management?error=Error updating office: {str(e)}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+
+@app.delete("/api/delete-office/{office_id}", response_class=JSONResponse, summary="Delete office")
+async def delete_office_api(
+    office_id: int,
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Delete an office and its associated data."""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role")
+    
+    # Only HQ admin can delete offices
+    if not user_email or user_role != "hq_admin":
+        raise HTTPException(status_code=403, detail="Only HQ admin can delete offices")
+    
+    try:
+        cursor = db.cursor()
+        
+        # Check if office exists
+        cursor.execute("SELECT office_name FROM offices WHERE id = %s", (office_id,))
+        office = cursor.fetchone()
+        
+        if not office:
+            cursor.close()
+            return {"success": False, "error": "Office not found"}
+        
+        office_name = office[0]
+        
+        # Delete associated employee records and attendance records
+        cursor.execute("SELECT email FROM employee_details WHERE office_id = %s AND job_role = 'Office Admin'", (office_id,))
+        admins = cursor.fetchall()
+        
+        # Delete attendance records for employees in this office
+        cursor.execute("DELETE FROM attendance WHERE user_email IN (SELECT email FROM employee_details WHERE office_id = %s)", (office_id,))
+        
+        # Delete employee records from this office
+        cursor.execute("DELETE FROM employee_details WHERE office_id = %s", (office_id,))
+        
+        # Delete the office itself
+        cursor.execute("DELETE FROM offices WHERE id = %s", (office_id,))
+        db.commit()
+        cursor.close()
+        
+        return {"success": True, "message": f"Office '{office_name}' deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/get-all-offices", response_class=JSONResponse, summary="Get all offices")
+async def get_all_offices_api(
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Fetch all offices for account management panel."""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role")
+    
+    # Only HQ admin can view all offices
+    if not user_email or user_role != "hq_admin":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    offices = get_all_offices(db)
+    return {"offices": offices}
 
 
 @app.get("/logout", summary="Log user out", name="logout")
@@ -1352,10 +1633,13 @@ async def delete_employee_endpoint(
 
 # FastAPI endpoints for invoice and GST bill management
 def require_hr(request: Request):
-    """Dependency to ensure HR access"""
+    """Dependency to ensure HR/Admin access"""
     user_email = request.session.get("user_email")
-    if user_email != config.HR_EMAIL:
-        raise HTTPException(status_code=403, detail="Access denied. HR privileges required.")
+    user_role = request.session.get("user_role", "employee")
+    
+    # Allow HQ admin and office admin
+    if user_role not in ["hq_admin", "office_admin"]:
+        raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
     return user_email
 
 
@@ -1389,6 +1673,7 @@ async def api_get_gst_bill(bill_id: int, hr_email: str = Depends(require_hr)):
 async def get_billing(request: Request, hr_email: str = Depends(require_hr)):
     """Display billing dashboard with invoices and GST bills"""
     try:
+        user_email = request.session.get("user_email")
         invoices = fetch_all_invoices(limit=100)
         bills = fetch_all_gst_bills(limit=100)
         
@@ -1402,7 +1687,8 @@ async def get_billing(request: Request, hr_email: str = Depends(require_hr)):
             "bills": bills,
             "invoice_summary": invoice_summary,
             "bill_summary": bill_summary,
-            "is_hr": True
+            "is_hr": True,
+            "user_email": user_email
         })
     except Exception as e:
         print(f"Error in /billing endpoint: {e}")

@@ -293,27 +293,7 @@ users = {
     #     "total_leave": 0,
     #     "total_working": 0
     # },
-"balachandarzugopvt@gmail.com": {
-        "password": "Balachandran@123",
-        "name": "BALACHANDRAN S",
-        "email": "balachandarzugopvt@gmail.com",
-        "photo": "",
-        "joining_date": "02/02/2026",
-        "employee_number": "ZPL022",
-        "phone": "9543630403",
-        "parent_phone": "",
-        "dob": "",
-        "gender": "Male",
-        "job_role": "",
-        "native": "",
-        "address": "",
-        "aadhar": "",
-        "pan_card": "",
-        "bank_details": "",
-        "salary": 21000,
-        "total_leave": 0,
-        "total_working": 0
-    },
+# 
 "snehanzugopvt@gmail.com": {
         "password": "Sneha@123",
         "name": "SNEHA N",

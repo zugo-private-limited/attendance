@@ -22,7 +22,17 @@
                 <li><a href="{{ url_for('logout') }}" style="color: #221f1eff; font-weight: bold;">Home page</a></li>
                 <li><a href="{{ url_for('dashboard_view') }}" style="color: #221f1eff; font-weight: bold;">Overview</a></li>
                 <li class="active"><a href="{{ url_for('employees_page') }}" style="color: #221f1eff; font-weight: bold;">Employee's</a></li>
+                {% if is_hr %}
+                <li><a href="{{ url_for('hr_management') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+                {% else %}
                 <li><a href="{{ url_for('report') }}" style="color: #221f1eff; font-weight: bold;">Attendance</a></li>
+                {% endif %}
+                {% if is_hr %}
+                <li><a href="{{ url_for('billing') }}" style="color: #221f1eff; font-weight: bold;">Billing</a></li>
+                {% endif %}
+                {% if user_email == 'zugopvtnetwork@gmail.com' %}
+                <li><a href="/account-management" style="color: #221f1eff; font-weight: bold;">Account Management</a></li>
+                {% endif %}
             </ul>
 
             <div class="help-center">
@@ -222,6 +232,8 @@
             document.getElementById('formAction').value = 'add';
             document.getElementById('editEmail').value = '';
             document.getElementById('email').disabled = false;
+            document.getElementById('password').required = true;
+            document.getElementById('password').placeholder = 'Enter password for new employee';
             
             modal.classList.remove('hidden');
         }
@@ -234,7 +246,7 @@
             title.textContent = 'Edit Employee Details';
             document.getElementById('editEmail').value = email;
             document.getElementById('formAction').value = 'edit';
-            document.getElementById('email').disabled = true;
+            document.getElementById('email').readOnly = true;  // Use readOnly instead of disabled
             document.getElementById('password').required = false;
             document.getElementById('password').placeholder = 'Leave blank to keep current password';
             
@@ -243,7 +255,7 @@
                 .then(res => res.json())
                 .then(emp => {
                     document.getElementById('name').value = emp.name || '';
-                    document.getElementById('email').value = emp.email || '';
+                    document.getElementById('email').value = emp.email || '';  // This will be sent in the form
                     document.getElementById('phone').value = emp.phone || '';
                     document.getElementById('employee_number').value = emp.employee_number || '';
                     document.getElementById('role').value = emp.job_role || 'Employee';
@@ -262,6 +274,12 @@
         }
 
         function deleteEmployee(email, name) {
+            // Protect the main HR account
+            if (email === 'zugopvtnetwork@gmail.com') {
+                alert('⚠️ Cannot delete the main HR account (zugopvtnetwork@gmail.com)\n\nThis is a protected system account.');
+                return;
+            }
+            
             if (!confirm(`⚠️ Are you sure you want to DELETE ${name}?\n\nThis action CANNOT be undone!`)) {
                 return;
             }
@@ -269,17 +287,16 @@
             const formData = new FormData();
             formData.append('email', email);
             
-            fetch('/api/hr/delete-employee', {
+            fetch('/delete-employee', {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`✅ ${name} has been deleted successfully`);
-                    location.reload();
+            .then(res => {
+                if (res.redirected) {
+                    // Redirect after deletion
+                    window.location.href = res.url;
                 } else {
-                    alert('❌ Error deleting employee: ' + (data.detail || 'Unknown error'));
+                    return res.text();
                 }
             })
             .catch(err => {
@@ -295,43 +312,55 @@
             event.preventDefault();
             
             const action = document.getElementById('formAction').value;
-            const email = document.getElementById('editEmail').value;
-            const formData = new FormData();
+            const form = document.getElementById('employeeForm');
+            const formData = new FormData(form);
             
-            formData.append('name', document.getElementById('name').value);
-            formData.append('phone', document.getElementById('phone').value);
-            formData.append('employee_number', document.getElementById('employee_number').value);
-            formData.append('job_role', document.getElementById('role').value);
-            formData.append('dob', document.getElementById('dob').value);
-            formData.append('salary', document.getElementById('salary').value);
-            
-            if (action === 'edit') {
-                formData.append('email', email);
+            if (action === 'add') {
+                // For add, submit to /manage-employee with action=add
+                formData.set('action', 'add');
                 
-                fetch('/api/hr/edit-employee', {
+                fetch('/manage-employee', {
                     method: 'POST',
                     body: formData
                 })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Employee details updated successfully');
-                        location.reload();
+                .then(res => {
+                    if (res.redirected) {
+                        window.location.href = res.url;
                     } else {
-                        alert('❌ Error updating employee: ' + (data.detail || 'Unknown error'));
+                        return res.text();
+                    }
+                })
+                .catch(err => {
+                    alert('❌ Error adding employee: ' + err);
+                });
+            } else if (action === 'edit') {
+                // For edit, submit to /manage-employee with action=edit
+                const email = document.getElementById('editEmail').value;
+                formData.set('action', 'edit');
+                formData.set('email', email);
+                
+                fetch('/manage-employee', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => {
+                    if (res.redirected) {
+                        window.location.href = res.url;
+                    } else {
+                        return res.text();
                     }
                 })
                 .catch(err => {
                     alert('❌ Error updating employee: ' + err);
                 });
-            } else {
-                // Add new employee logic would go here
-                alert('Add employee feature coming soon');
             }
             
             closeModal();
         }
         {% endif %}
     </script>
+    <footer style="text-align: center; padding: 20px; background: #f8f9fa; color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee;">
+        © Zugo. All rights reserved.
+    </footer>
 </body>
 </html>
