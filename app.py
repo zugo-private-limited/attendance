@@ -332,22 +332,40 @@ async def handle_attendance(
     timezone_offset: int = Form(default=330),  # Default IST (UTC+5:30 = 330 minutes)
     db = Depends(get_db_connection)
 ):
-    """Processes check-in and check-out requests.""" 
+    """
+    Processes check-in and check-out requests with office-aware validation.
+    
+    Main HQ (office_id=1):
+        ✅ Enforces location-based check-in
+        ✅ Enforces time windows (morning/afternoon)
+        ✅ Enforces checkout time restrictions
+    
+    Branch Offices (office_id > 1):
+        ✅ No location validation
+        ✅ No time restrictions
+        ✅ Any time allowed
+    """
     user_email = request.session.get("user_email")
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
-    try:
-        if not is_at_office(float(latitude), float(longitude)):
+    # ===== GET OFFICE_ID FOR THIS EMPLOYEE =====
+    office_id = request.session.get("office_id", 1)  # Default to Main HQ if not set
+    
+    # ===== LOCATION VALIDATION (MAIN HQ ONLY) =====
+    if office_id == 1:  # Main HQ enforcement
+        try:
+            if not is_at_office(float(latitude), float(longitude), office_id, db):
+                return RedirectResponse(
+                    url=f"/report?error=Location+outside+office+bounds: +{latitude:.6f},+{longitude:.6f}",
+                    status_code=status.HTTP_303_SEE_OTHER
+                )
+        except ValueError:
             return RedirectResponse(
-                url=f"/report?error=Location+outside+office+bounds: +{latitude:.6f},+{longitude:.6f}",
+                url="/report?error=Invalid+location+data. +Please+enable+location+services",
                 status_code=status.HTTP_303_SEE_OTHER
             )
-    except ValueError:
-        return RedirectResponse(
-            url="/report?error=Invalid+location+data. +Please+enable+location+services",
-            status_code=status.HTTP_303_SEE_OTHER
-        )
+    # Branch offices skip location validation
 
     # Get current time in IST
     now_ist = get_ist_now()
@@ -370,14 +388,17 @@ async def handle_attendance(
     cursor.close()
 
     if action == "check-in":
-        is_morning = config.CHECKIN_MORNING_START <= current_time <= config.CHECKIN_MORNING_END
-        is_afternoon = config.CHECKIN_AFTERNOON_START <= current_time <= config.CHECKIN_AFTERNOON_END
+        # ===== CHECK-IN TIME VALIDATION (MAIN HQ ONLY) =====
+        if office_id == 1:  # Main HQ has time windows
+            is_morning = config.CHECKIN_MORNING_START <= current_time <= config.CHECKIN_MORNING_END
+            is_afternoon = config.CHECKIN_AFTERNOON_START <= current_time <= config.CHECKIN_AFTERNOON_END
 
-        if not (is_morning or is_afternoon):
-            return RedirectResponse(
-                url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+between+{config.CHECKIN_AFTERNOON_START}+and+{config.CHECKIN_AFTERNOON_END}",
-                status_code=status.HTTP_303_SEE_OTHER
-            )
+            if not (is_morning or is_afternoon):
+                return RedirectResponse(
+                    url=f"/report?error=Check-in+only+allowed+between+{config.CHECKIN_MORNING_START}+and+{config.CHECKIN_MORNING_END}+or+between+{config.CHECKIN_AFTERNOON_START}+and+{config.CHECKIN_AFTERNOON_END}",
+                    status_code=status.HTTP_303_SEE_OTHER
+                )
+        # Branch offices skip time window validation
 
         if any(r['action'] == 'check-in' for r in todays_records):
             return RedirectResponse(
@@ -386,11 +407,14 @@ async def handle_attendance(
             )
 
     elif action == "check-out":  
-        if current_time < config.CHECKOUT_MIN_TIME:
-            return RedirectResponse(
-                url=f"/report?error=Check-out+only+allowed+after+{config.CHECKOUT_MIN_TIME}",
-                status_code=status.HTTP_303_SEE_OTHER
-            )
+        # ===== CHECK-OUT TIME VALIDATION (MAIN HQ ONLY) =====
+        if office_id == 1:  # Main HQ enforces minimum checkout time
+            if current_time < config.CHECKOUT_MIN_TIME:
+                return RedirectResponse(
+                    url=f"/report?error=Check-out+only+allowed+after+{config.CHECKOUT_MIN_TIME}",
+                    status_code=status.HTTP_303_SEE_OTHER
+                )
+        # Branch offices skip time validation
 
         if not any(r['action'] == 'check-in' for r in todays_records):
             return RedirectResponse(
@@ -409,16 +433,17 @@ async def handle_attendance(
         cursor.execute(
             """
             INSERT INTO attendance 
-            (user_email, action, event_time, latitude, longitude, location_text, comment)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (user_email, action, event_time, latitude, longitude, location_text, comment, office_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_email, action, now_utc, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}", comment if comment else None)
+            (user_email, action, now_utc, latitude, longitude, f"{latitude:.6f}, {longitude:.6f}", comment if comment else None, office_id)
         )
         db.commit()
         cursor.close()
 
         if action == "check-in":  
-            working_days, _, _ = calculate_working_days_and_leaves_for_employee(user_email, today)
+            # ===== OFFICE-AWARE WORKING DAYS CALCULATION =====
+            working_days, _, _ = calculate_working_days_and_leaves_for_employee(user_email, today, office_id)
             cursor = db.cursor()
             cursor.execute(
                 "UPDATE employee_details SET total_working = %s WHERE email = %s",
@@ -539,7 +564,7 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             comment_record = cursor.fetchone()
             emp["last_comment"] = comment_record.get("comment") if comment_record else None
             
-            calculated_working_days, period_start, period_end = calculate_working_days_and_leaves_for_employee(email, today)
+            calculated_working_days, period_start, period_end = calculate_working_days_and_leaves_for_employee(email, today, office_id)
             emp["total_working"] = calculated_working_days
         
         static_data = static_users.get(emp['email'], {})
@@ -1652,9 +1677,10 @@ def require_hr(request: Request):
 # =========================================================================
 
 @app.get("/api/invoice/{invoice_id}")
-async def api_get_invoice(invoice_id: int, hr_email: str = Depends(require_hr)):
+async def api_get_invoice(invoice_id: int, request: Request, hr_email: str = Depends(require_hr)):
     """Get invoice details for API"""
-    invoice = fetch_invoice_by_id(invoice_id)
+    office_id = request.session.get("office_id", 1)
+    invoice = fetch_invoice_by_id(invoice_id, office_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return invoice
@@ -1678,7 +1704,8 @@ async def get_billing(request: Request, hr_email: str = Depends(require_hr)):
     """Display billing dashboard with invoices and GST bills"""
     try:
         user_email = request.session.get("user_email")
-        invoices = fetch_all_invoices(limit=100)
+        office_id = request.session.get("office_id", 1)
+        invoices = fetch_all_invoices(office_id, limit=100)
         bills = fetch_all_gst_bills(limit=100)
         
         # Calculate summaries
@@ -1714,7 +1741,8 @@ async def get_quotation(request: Request, hr_email: str = Depends(require_hr)):
 @app.get("/invoices", response_class=HTMLResponse, summary="Display invoices page")
 async def get_invoices(request: Request, hr_email: str = Depends(require_hr)):
     """Display all invoices with filtering and search"""
-    invoices = fetch_all_invoices(limit=100)
+    office_id = request.session.get("office_id", 1)
+    invoices = fetch_all_invoices(office_id, limit=100)
     
     # Calculate summary
     summary = get_invoice_summary()
@@ -1730,7 +1758,8 @@ async def get_invoices(request: Request, hr_email: str = Depends(require_hr)):
 @app.get("/invoice/{invoice_id}", response_class=HTMLResponse)
 async def get_invoice_detail(invoice_id: int, request: Request, hr_email: str = Depends(require_hr)):
     """Get detailed view of a single invoice"""
-    invoice = fetch_invoice_by_id(invoice_id)
+    office_id = request.session.get("office_id", 1)
+    invoice = fetch_invoice_by_id(invoice_id, office_id)
     
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
@@ -1833,6 +1862,9 @@ async def create_new_invoice(
 ):
     """Create a new invoice"""
     try:
+        # Get office_id from session (default to 1 for Main HQ)
+        office_id = request.session.get("office_id", 1)
+        
         # Convert string form values to floats, handling empty strings
         def to_float(value: str, default: float = 0.0) -> float:
             if not value or value.strip() == "":
@@ -1863,7 +1895,7 @@ async def create_new_invoice(
             "status": "draft"
         }
         
-        result = create_invoice(invoice_data)
+        result = create_invoice(invoice_data, office_id)
         return RedirectResponse(url=f"/invoice/{result['id']}", status_code=303)
     except DuplicateInvoiceNumberError as e:
         logging.warning(f"Duplicate invoice number when creating invoice: {invoice_no}")
@@ -1894,7 +1926,8 @@ async def update_invoice_status_endpoint(
 ):
     """Update invoice status"""
     try:
-        success = update_invoice_status(invoice_id, status)
+        office_id = request.session.get("office_id", 1)
+        success = update_invoice_status(invoice_id, status, office_id)
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found")
         return {"message": "Invoice status updated", "status": status}
@@ -1905,11 +1938,13 @@ async def update_invoice_status_endpoint(
 @app.post("/delete-invoice/{invoice_id}")
 async def delete_invoice_post_endpoint(
     invoice_id: int,
+    request: Request,
     hr_email: str = Depends(require_hr)
 ):
     """Delete an invoice (POST method for frontend compatibility)"""
     try:
-        success = delete_invoice(invoice_id)
+        office_id = request.session.get("office_id", 1)
+        success = delete_invoice(invoice_id, office_id)
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found")
         return {"success": True, "message": "Invoice deleted"}
@@ -1921,11 +1956,13 @@ async def delete_invoice_post_endpoint(
 @app.delete("/invoice/{invoice_id}")
 async def delete_invoice_endpoint(
     invoice_id: int,
+    request: Request,
     hr_email: str = Depends(require_hr)
 ):
     """Delete an invoice"""
     try:
-        success = delete_invoice(invoice_id)
+        office_id = request.session.get("office_id", 1)
+        success = delete_invoice(invoice_id, office_id)
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found")
         return {"message": "Invoice deleted"}
@@ -1959,6 +1996,9 @@ async def update_invoice_endpoint(
 ):
     """Update an existing invoice"""
     try:
+        # Get office_id from session
+        office_id = request.session.get("office_id", 1)
+        
         # Convert string form values to floats, handling empty strings
         def to_float(value: str, default: float = 0.0) -> float:
             if not value or value.strip() == "":
@@ -1989,7 +2029,7 @@ async def update_invoice_endpoint(
             "status": invoice_status or "draft"
         }
         
-        success = update_invoice(invoice_id, invoice_data)
+        success = update_invoice(invoice_id, invoice_data, office_id)
         if not success:
             raise HTTPException(status_code=404, detail="Invoice not found")
         return RedirectResponse(url=f"/invoice/{invoice_id}", status_code=303)

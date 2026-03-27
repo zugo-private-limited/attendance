@@ -34,8 +34,21 @@ IST = pytz.timezone('Asia/Kolkata')
 # SERVICE FUNCTIONS (Business Logic)
 # ===========================================================================
 
-def is_at_office(lat: float, lon: float) -> bool:
-    """Check if a location is within the office radius."""
+def is_at_office(lat: float, lon: float, office_id: int = None, db = None) -> bool:
+    """
+    Check if a location is within the office radius.
+    
+    Args:
+        lat: Employee's latitude
+        lon: Employee's longitude
+        office_id: The office to validate against (optional, defaults to Main HQ)
+        db: Database connection to fetch office-specific coordinates
+    
+    Returns:
+        bool: True if location is within office radius OR if office doesn't require location check
+    """
+    from data import get_office_by_id
+    
     def haversine(lat1, lon1, lat2, lon2):
         R = 6371000  # Earth radius in meters
         dlat = radians(lat2 - lat1)
@@ -43,49 +56,118 @@ def is_at_office(lat: float, lon: float) -> bool:
         a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
         c = 2 * asin(sqrt(a))
         return R * c
-    return haversine(lat, lon, config.OFFICE_LAT, config.OFFICE_LON) <= config.OFFICE_RADIUS_METERS
+    
+    # If no office_id provided or is not Main HQ, branch offices don't need location check
+    if office_id is None:
+        office_id = 1  # Default to Main HQ
+    
+    # Main HQ (office_id = 1) requires location check
+    if office_id == 1:
+        return haversine(lat, lon, config.OFFICE_LAT, config.OFFICE_LON) <= config.OFFICE_RADIUS_METERS
+    
+    # Branch offices (office_id > 1) can check in from anywhere
+    # They don't require location validation
+    return True
 
 
-def is_checkout_allowed(current_time: datetime.time) -> bool:
-    """Checks if the current time is after the minimum allowed check-out time."""
-    return current_time >= CHECKOUT_MIN_TIME
-
-def get_attendance_period_dates(ref_date: date) -> tuple[date, date]:
+def is_checkout_allowed(current_time: datetime.time, office_id: int = None) -> bool:
     """
-    Calculates the start and end dates for the attendance period
-    (20th of previous month to 20th of current month or similar).
+    Checks if the current time is after the minimum allowed check-out time.
+    
+    Args:
+        current_time: The current time to check
+        office_id: The office to validate against (optional)
+    
+    Returns:
+        bool: True if checkout is allowed, False if restricted to specific time
     """
-    if ref_date.day > ATTENDANCE_PERIOD_END_DAY:
-        # Example: if today is Oct 25, period is Oct 21 to Nov 20
-        start_month = ref_date.month
-        start_year = ref_date.year
-        end_month = (ref_date.month % 12) + 1
-        end_year = ref_date.year if end_month != 1 else ref_date.year + 1
+    # If no office_id provided or is Main HQ, enforce checkout time
+    if office_id is None:
+        office_id = 1  # Default to Main HQ
+    
+    # Main HQ (office_id = 1) has time restrictions
+    if office_id == 1:
+        return current_time >= CHECKOUT_MIN_TIME
+    
+    # Branch offices (office_id > 1) can checkout anytime
+    return True
+
+def get_attendance_period_dates(ref_date: date, office_id: int = None) -> tuple[date, date]:
+    """
+    Calculates the start and end dates for the attendance period.
+    
+    For Main HQ (office_id=1):
+        - Period: 21st of current/previous month to 20th of next/current month
+        - Example: 21 Mar - 20 Apr (if ref_date is between 21/Mar and 20/Apr)
+    
+    For Branch Offices (office_id > 1):
+        - Period: 1st to last day of the calendar month
+        - Example: 1 Apr - 30 Apr
+    
+    Args:
+        ref_date: Reference date to calculate period for
+        office_id: The office type (1=HQ with 21-20 period, >1=Branch with calendar period)
+    
+    Returns:
+        tuple: (start_date, end_date)
+    """
+    if office_id is None:
+        office_id = 1  # Default to Main HQ (21-20 period)
+    
+    # ===== MAIN HQ: 21st to 20th Period =====
+    if office_id == 1:
+        if ref_date.day > ATTENDANCE_PERIOD_END_DAY:  # e.g., if day > 20
+            # Example: if today is Oct 25, period is Oct 21 to Nov 20
+            start_month = ref_date.month
+            start_year = ref_date.year
+            end_month = (ref_date.month % 12) + 1
+            end_year = ref_date.year if end_month != 1 else ref_date.year + 1
+        else:
+            # Example: if today is Oct 15, period is Sep 21 to Oct 20
+            end_month = ref_date.month
+            end_year = ref_date.year
+            start_month = (ref_date.month - 2 + 12) % 12 + 1
+            start_year = ref_date.year if start_month != 12 else ref_date.year - 1
+
+        start_date = date(start_year, start_month, ATTENDANCE_PERIOD_START_DAY)
+        end_date = date(end_year, end_month, ATTENDANCE_PERIOD_END_DAY)
+
+        # Adjust start_date if it falls in the current month but should be previous
+        if ref_date.day <= ATTENDANCE_PERIOD_END_DAY:
+            if start_date.month == ref_date.month:
+                # This means start_date was calculated for current year/month but should be previous year/month
+                start_date = date(start_date.year, start_date.month - 1, ATTENDANCE_PERIOD_START_DAY)
+                if start_date.month == 0:  # Handle December case
+                    start_date = date(start_date.year - 1, 12, ATTENDANCE_PERIOD_START_DAY)
+
+        return start_date, end_date
+    
+    # ===== BRANCH OFFICES: Calendar Month Period =====
     else:
-        # Example: if today is Oct 15, period is Sep 21 to Oct 20
-        end_month = ref_date.month
-        end_year = ref_date.year
-        start_month = (ref_date.month - 2 + 12) % 12 + 1 # month-1, then adjust for Jan
-        start_year = ref_date.year if start_month != 12 else ref_date.year - 1
-
-    start_date = date(start_year, start_month, ATTENDANCE_PERIOD_START_DAY)
-    end_date = date(end_year, end_month, ATTENDANCE_PERIOD_END_DAY)
-
-    # Adjust start_date if it falls in the current month but should be previous
-    if ref_date.day <= ATTENDANCE_PERIOD_END_DAY:
-        if start_date.month == ref_date.month:
-             # This means start_date was calculated for current year/month but should be previous year/month
-            start_date = date(start_date.year, start_date.month - 1, ATTENDANCE_PERIOD_START_DAY)
-            if start_date.month == 0: # Handle December case
-                start_date = date(start_date.year - 1, 12, ATTENDANCE_PERIOD_START_DAY)
-
-    return start_date, end_date
+        # Start: 1st of the month
+        start_date = date(ref_date.year, ref_date.month, 1)
+        
+        # End: Last day of the month
+        if ref_date.month == 12:
+            end_date = date(ref_date.year, 12, 31)
+        else:
+            end_date = date(ref_date.year, ref_date.month + 1, 1) - timedelta(days=1)
+        
+        return start_date, end_date
 
 
-def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: date = None):
+def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: date = None, office_id: int = None):
     """
-    Calculates working days and leaves for a user based on the attendance period (21st to 20th).
+    Calculates working days and leaves for a user based on the attendance period.
+    - Main HQ (office_id=1): 21st to 20th period
+    - Branch Offices (office_id>1): Calendar month (1st to last day)
+    
     If ref_date is not provided, uses today's date to determine the current period.
+    
+    Args:
+        user_email: Employee email address
+        ref_date: Reference date for period calculation (defaults to today)
+        office_id: Office ID to determine period type (defaults to 1/HQ)
     
     Returns:
         tuple: (total_working_days, start_period, end_period)
@@ -93,7 +175,10 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
     if ref_date is None:
         ref_date = datetime.now(IST).date()  # ✅ Uses IST
 
-    start_period, end_period = get_attendance_period_dates(ref_date)
+    if office_id is None:
+        office_id = 1  # Default to Main HQ
+
+    start_period, end_period = get_attendance_period_dates(ref_date, office_id)
     
     attendance_records = fetch_attendance_for_period(user_email, start_period, end_period)
 

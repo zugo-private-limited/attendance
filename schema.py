@@ -218,6 +218,51 @@ def initialize_database_schema():
             if "already exists" not in str(e):
                 print(f"Error creating comments index: {e}")
 
+        # 4. Invoices Table (for billing module - multi-office support)
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS invoices (
+                    id SERIAL PRIMARY KEY,
+                    office_id INT DEFAULT 1,
+                    invoice_no VARCHAR(100) UNIQUE NOT NULL,
+                    date DATE NOT NULL,
+                    vendor_name VARCHAR(255) NOT NULL,
+                    vendor_gstin VARCHAR(50),
+                    vendor_address TEXT,
+                    customer_name VARCHAR(255) NOT NULL,
+                    customer_gstin VARCHAR(50),
+                    customer_address TEXT,
+                    description TEXT NOT NULL,
+                    hsn_code VARCHAR(20),
+                    uom VARCHAR(50),
+                    quantity NUMERIC(10,2),
+                    rate NUMERIC(12,2),
+                    cgst NUMERIC(5,2) DEFAULT 0,
+                    sgst NUMERIC(5,2) DEFAULT 0,
+                    igst NUMERIC(5,2) DEFAULT 0,
+                    status VARCHAR(50) DEFAULT 'draft',
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE SET DEFAULT
+                )
+            """)
+            print("Created/verified invoices table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Error creating invoices table: {e}")
+
+        # Add office_id column to invoices if it doesn't exist (for existing databases)
+        try:
+            cursor.execute("""
+                ALTER TABLE invoices 
+                ADD COLUMN IF NOT EXISTS office_id INT DEFAULT 1
+            """)
+            print("Verified office_id column in invoices table")
+        except psycopg2.Error as e:
+            if "already exists" not in str(e):
+                print(f"Info: {e}")
+
         conn.commit()
 
         # Seed Offices - Create Main/HQ office first with id=1
