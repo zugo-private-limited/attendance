@@ -23,24 +23,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://...")
 # ===========================================================================
 OFFICES = [
     {
-        "name": "Tiruppur",
+        "name": "wpsstore ",
         "admin_email": "zugoadmin1@gmail.com",
         "lat": 11.2588,  # Tiruppur coordinates
         "lon": 77.3412,
-        "radius": 500
-    },
-    {
-        "name": "CBE",
-        "admin_email": "zugoadmin2@gmail.com",
-        "lat": 11.0081,  # Coimbatore coordinates
-        "lon": 76.9069,
-        "radius": 500
-    },
-    {
-        "name": "CBE Main",
-        "admin_email": "zugoadmin3@gmail.com",
-        "lat": 11.0081,  # Coimbatore coordinates
-        "lon": 76.9069,
         "radius": 500
     }
 ]

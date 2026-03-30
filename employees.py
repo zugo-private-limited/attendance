@@ -335,26 +335,25 @@ users = {
      "salary": "40000",
      "total_leave": 0,
      "total_working": 0
- },
- "sugunasundarajothi@gmail.com": {
-     "password": "Anushya@12",
-     "name": "ANUSHYA P",
-     "email": "sugunasundarajothi@gmail.com",
-     "photo": "anushya.jpeg",
-     "joining_date": "09/01/2026",
-     "employee_number": "ZPL026",
-     "phone": "7397791885",
-     "parent_phone": "8680034657",
-     "dob": "28/03/2007",
-     "gender": "Female",
-     "job_role": "SALES EXECUTIVE",
-     "native": "Madurai",
-     "address": "no 34 , Sathya nagar 2nd street , Gandhi nagar post , Tirupur- 641603",
-     "aadhar": "4796 3535 4492",
-     "pan_card": "GCSPA5435AD",
-     "bank_details": "bank of Baroda ,ACC no : 26558100015141, IFSC code : BARB0SSITIR",
-     "salary": 12000,
-     "total_leave": 0,
-     "total_working": 0
  }
-}
+#  "sugunasundarajothi@gmail.com": {
+#      "password": "Anushya@12",
+#      "name": "ANUSHYA P",
+#      "email": "sugunasundarajothi@gmail.com",
+#      "photo": "anushya.jpeg",
+#      "joining_date": "09/01/2026",
+#      "employee_number": "ZPL026",
+#      "phone": "7397791885",
+#      "parent_phone": "8680034657",
+#      "dob": "28/03/2007",
+#      "gender": "Female",
+#      "job_role": "SALES EXECUTIVE",
+#      "native": "Madurai",
+#      "address": "no 34 , Sathya nagar 2nd street , Gandhi nagar post , Tirupur- 641603",
+#      "aadhar": "4796 3535 4492",
+#      "pan_card": "GCSPA5435AD",
+#      "bank_details": "bank of Baroda ,ACC no : 26558100015141, IFSC code : BARB0SSITIR",
+#      "salary": 12000,
+#      "total_leave": 0,
+#      "total_working": 0
+ }

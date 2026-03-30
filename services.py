@@ -195,6 +195,66 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
     return total_working_days, start_period, end_period
 
 
+def calculate_absences_for_period(user_email: str, ref_date: date = None, office_id: int = None):
+    """
+    ✅ FIXED: Calculates ABSENCE count only for dates UP TO TODAY (not future dates).
+    
+    Key Points:
+    - Main HQ: Uses 21st-20th period
+    - Branch Offices: Uses calendar month (1st-end)
+    - Only counts weekdays (Mon-Sat)
+    - Excludes Sundays (office closed)
+    - ⚠️ CRITICAL: Only counts up to TODAY, never includes future dates
+    
+    Args:
+        user_email: Employee email
+        ref_date: Reference date for period (defaults to today)
+        office_id: Office type (1=HQ with 21-20, >1=Branch with calendar)
+    
+    Returns:
+        int: Count of absent weekdays (only up to today)
+    """
+    if ref_date is None:
+        ref_date = datetime.now(IST).date()  # ✅ Uses IST
+    
+    if office_id is None:
+        office_id = 1
+    
+    today = datetime.now(IST).date()  # TODAY - Never count beyond this
+    
+    # Get period dates (21-20 for HQ, 1-end for branch)
+    start_period, end_period = get_attendance_period_dates(ref_date, office_id)
+    
+    # ✅ CRITICAL FIX: Cap end_period at TODAY to never count future dates
+    if end_period > today:
+        end_period = today
+    
+    # Fetch attendance records for the period (only up to today)
+    attendance_records = fetch_attendance_for_period(user_email, start_period, end_period)
+    
+    # Build set of dates with check-ins
+    checked_in_dates = set()
+    for record in attendance_records:
+        if record["action"] == "check-in":
+            checked_in_dates.add(record["event_time"].date())
+    
+    # Count absences: weekdays (Mon-Sat) with NO check-in
+    absence_count = 0
+    current_date = start_period
+    
+    while current_date <= end_period:
+        is_sunday = current_date.weekday() == 6  # 6 = Sunday
+        has_check_in = current_date in checked_in_dates
+        
+        # Count as absence: weekday without check-in (not Sunday)
+        if not is_sunday and not has_check_in:
+            absence_count += 1
+        
+        current_date += timedelta(days=1)
+    
+    return absence_count
+
+
 def mark_leaves_for_absent_employees():
     """
     Marks employees as absent after 3 consecutive days without check-in.
