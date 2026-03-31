@@ -74,11 +74,17 @@ def initialize_billing_schema():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        conn.commit()
         
         # Create index for invoices
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(date);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_office_id ON invoices(office_id);")
+        try:
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(date);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_office_id ON invoices(office_id);")
+            conn.commit()
+        except psycopg2.Error as e:
+            conn.rollback()
+            print(f"Warning creating invoices indexes: {e}")
 
         # Create GST Bills table
         cursor.execute("""
@@ -101,41 +107,48 @@ def initialize_billing_schema():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        conn.commit()
         
         # Create indexes for gst_bills
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_bill_no ON gst_bills(bill_no);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_date ON gst_bills(date);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_status ON gst_bills(status);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_office_id ON gst_bills(office_id);")
-
-        # Add office_id column to existing tables if they don't have it
         try:
-            cursor.execute("ALTER TABLE invoices ADD COLUMN office_id INT DEFAULT 1;")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_bill_no ON gst_bills(bill_no);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_date ON gst_bills(date);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_status ON gst_bills(status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_gst_bills_office_id ON gst_bills(office_id);")
             conn.commit()
-            print("Added office_id column to invoices table")
-        except psycopg2.errors.DuplicateColumn:
-            pass  # Column already exists
         except psycopg2.Error as e:
-            print(f"Error adding office_id to invoices: {e}")
+            conn.rollback()
+            print(f"Warning creating gst_bills indexes: {e}")
+
+        # Add office_id column to existing tables if they don't have it (for backward compatibility)
+        # This is safe because the CREATE TABLE statements above already include office_id
+        try:
+            cursor.execute("""
+                ALTER TABLE invoices ADD COLUMN office_id INT DEFAULT 1;
+            """)
+            conn.commit()
+        except (psycopg2.errors.DuplicateColumn, psycopg2.Error):
+            # Column already exists or table doesn't exist - that's fine
             conn.rollback()
         
         try:
-            cursor.execute("ALTER TABLE gst_bills ADD COLUMN office_id INT DEFAULT 1;")
+            cursor.execute("""
+                ALTER TABLE gst_bills ADD COLUMN office_id INT DEFAULT 1;
+            """)
             conn.commit()
-            print("Added office_id column to gst_bills table")
-        except psycopg2.errors.DuplicateColumn:
-            pass  # Column already exists
-        except psycopg2.Error as e:
-            print(f"Error adding office_id to gst_bills: {e}")
+        except (psycopg2.errors.DuplicateColumn, psycopg2.Error):
+            # Column already exists or table doesn't exist - that's fine
             conn.rollback()
 
-        conn.commit()
         cursor.close()
         conn.close()
-        print("Billing schema initialization complete (PostgreSQL).")
+        print("✓ Billing schema initialization complete (PostgreSQL).")
         return True
     except psycopg2.Error as err:
-        print(f"Error during billing schema initialization: {err}")
+        print(f"❌ Error during billing schema initialization: {err}")
+        return False
+    except Exception as err:
+        print(f"❌ Unexpected error during billing schema initialization: {err}")
         return False
 
 
