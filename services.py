@@ -195,6 +195,62 @@ def calculate_working_days_and_leaves_for_employee(user_email: str, ref_date: da
     return total_working_days, start_period, end_period
 
 
+def calculate_leave_days_for_employee(user_email: str, ref_date: date = None, office_id: int = None):
+    """
+    Calculates leave days for an employee by computing:
+    Leave = Total Weekdays (Mon-Sat) in period - Days with check-in
+    
+    This function ALWAYS recalculates from attendance records and ignores
+    the stored total_leave in the database (which is unreliable).
+    
+    Args:
+        user_email: Employee email address
+        ref_date: Reference date for period calculation (defaults to today)
+        office_id: Office ID to determine period type (defaults to 1/HQ)
+    
+    Returns:
+        int: Number of leave days in the current period
+    """
+    if ref_date is None:
+        ref_date = datetime.now(IST).date()
+    
+    if office_id is None:
+        office_id = 1
+    
+    today = datetime.now(IST).date()
+    
+    # Get period dates
+    start_period, end_period = get_attendance_period_dates(ref_date, office_id)
+    
+    # Cap end_period at today to never count future dates
+    if end_period > today:
+        end_period = today
+    
+    # Fetch attendance records
+    attendance_records = fetch_attendance_for_period(user_email, start_period, end_period)
+    
+    # Build set of dates with check-ins
+    checked_in_dates = set()
+    for record in attendance_records:
+        if record["action"] == "check-in":
+            checked_in_dates.add(record["event_time"].date())
+    
+    # Count total weekdays (Mon-Sat, excluding Sundays) in period
+    total_weekdays = 0
+    current_date = start_period
+    
+    while current_date <= end_period:
+        is_sunday = current_date.weekday() == 6  # 6 = Sunday
+        if not is_sunday:
+            total_weekdays += 1
+        current_date += timedelta(days=1)
+    
+    # Calculate leave days = total weekdays - days with check-in
+    leave_days = total_weekdays - len(checked_in_dates)
+    
+    return max(0, leave_days)  # Return 0 if somehow negative
+
+
 def calculate_absences_for_period(user_email: str, ref_date: date = None, office_id: int = None):
     """
     ✅ FIXED: Calculates ABSENCE count only for dates UP TO TODAY (not future dates).

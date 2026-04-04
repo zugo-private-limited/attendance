@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 import config
 from data import get_db_connection, fetch_employees_by_office, get_office_by_id, fetch_employee_by_email, get_all_offices, get_user_role
-from services import calculate_working_days_and_leaves_for_employee
+from services import calculate_working_days_and_leaves_for_employee, calculate_leave_days_for_employee
 from app.utils.timezone import IST, get_ist_date
 from employees import users as static_users
 
@@ -66,6 +66,10 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             
             calculated_working_days, _, _ = calculate_working_days_and_leaves_for_employee(email, today, office_id)
             emp["total_working"] = calculated_working_days
+            
+            # Calculate leave days dynamically (ignoring database value which may be incorrect)
+            calculated_leave_days = calculate_leave_days_for_employee(email, today, office_id)
+            emp["total_leave"] = calculated_leave_days
         
         static_data = static_users.get(emp['email'], {})
         emp['salary'] = static_data.get('salary', 'Not Set')

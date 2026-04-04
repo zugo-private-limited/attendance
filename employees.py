@@ -335,6 +335,5 @@ users = {
 #      "salary": "40000",
 #      "total_leave": 0,
 #      "total_working": 0
-#  }
-
+#  }      
  }
