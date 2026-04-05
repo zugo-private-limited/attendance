@@ -101,6 +101,12 @@ async def dashboard_view(request: Request, db = Depends(get_db_connection)):
         request.session.clear()
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
+    # Map database field names to template field names
+    if 'total_working_days' in user:
+        user['total_working'] = user['total_working_days']
+    if 'total_leave_days' in user:
+        user['total_leave'] = user['total_leave_days']
+
     user_role = get_user_role(db, user_email)
     is_hr = user_role in ["hq_admin", "office_admin"]
 
