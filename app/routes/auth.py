@@ -44,10 +44,11 @@ async def handle_login(
     user_role = get_user_role(db, email)
     request.session["user_role"] = user_role
     
-    # Set office_id based on user assignment
+    # Set office_id based on user assignment (ALWAYS set it, don't skip if None)
     office_id = get_user_office_id(db, email)
-    if office_id:
-        request.session["office_id"] = office_id
+    # Default to office 1 (HQ) if not found
+    request.session["office_id"] = office_id if office_id else 1
+    print(f"[Login] {email} → Role: {user_role}, Office: {request.session['office_id']}")
     
     # Redirect based on role
     if user_role == "hq_admin":

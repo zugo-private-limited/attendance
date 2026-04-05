@@ -33,7 +33,7 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     from employees import users as static_users
     
     user_email = request.session.get("user_email")
-    office_id = request.session.get("office_id")
+    office_id = request.session.get("office_id", 1)  # Default to office 1 (HQ)
     user_role = request.session.get("user_role", "employee")
     
     if not user_email:
@@ -42,7 +42,10 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     is_hr = user_role in ["hq_admin", "office_admin"]
     
     all_employees = fetch_employees_by_office(db, office_id)
-    all_employees = [emp for emp in all_employees if emp.get("email") != config.HR_EMAIL]
+    # For HQ (office_id=1), include all employees including admin
+    # For other offices, filter out the HQ admin email
+    if office_id != 1:
+        all_employees = [emp for emp in all_employees if emp.get("email") != config.HR_EMAIL]
     
     current_office = get_office_by_id(db, office_id) if office_id else None
     office_name = current_office["office_name"] if current_office else "All Offices"
