@@ -101,13 +101,17 @@ async def signup(
         bank_details = None
     
     cursor = db.cursor()
+    # Determine office_id based on email domain
+    # HQ emails go to office 1, others based on their assignment
+    office_id = 1  # Default to HQ office
+    
     cursor.execute(
         """INSERT INTO employee_details 
            (name, email, password, photo, phone, parent_phone, dob, gender, 
-            employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details, office_id)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (name, email, password, photo, phone, parent_phone, dob, gender,
-         employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details)
+         employee_number, aadhar, joining_date, native, address, job_role, pan_card, salary, bank_details, office_id)
     )
     db.commit()
     cursor.close()
