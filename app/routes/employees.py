@@ -33,9 +33,17 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     from employees import users as static_users
     
     user_email = request.session.get("user_email")
-    office_id = request.session.get("office_id", 1)  # Default to office 1 (HQ)
+    office_id = request.session.get("office_id")
     user_role = request.session.get("user_role", "employee")
-    
+
+    # If branch office admin is logged in but office_id is missing, default to branch office 2
+    if office_id is None and user_role == "office_admin":
+        office_id = 2
+        request.session["office_id"] = office_id
+
+    if office_id is None:
+        office_id = 1
+
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
         
@@ -127,12 +135,19 @@ async def dashboard_view(request: Request, db = Depends(get_db_connection)):
 async def get_employee_api(email: str, request: Request, db = Depends(get_db_connection)):
     """API endpoint to fetch employee details for editing."""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
+    user_role = request.session.get("user_role", "employee")
+    office_id = request.session.get("office_id", 1)
+    
+    if not user_email or user_role not in ["hq_admin", "office_admin"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     employee = fetch_employee_by_email(db, email)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # For office admin, check if employee is in their office
+    if user_role == "office_admin" and employee.get('office_id') != office_id:
+        raise HTTPException(status_code=403, detail="Cannot edit employees from other offices")
     
     return employee
 
@@ -182,6 +197,11 @@ async def manage_employee(
     
     if user_role not in ["hq_admin", "office_admin"]:
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+    new_email = new_email.strip().lower()
+    email = email.strip().lower()
+    employee_number = employee_number.strip()
+    name = name.strip()
     
     try:
         cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -207,7 +227,7 @@ async def manage_employee(
                 return RedirectResponse(url="/hr-management?error=Error+uploading+photo", status_code=status.HTTP_303_SEE_OTHER)
         
         if action == "add":
-            cursor.execute("SELECT email FROM employee_details WHERE email = %s", (new_email,))
+            cursor.execute("SELECT email FROM employee_details WHERE LOWER(email) = LOWER(%s)", (new_email,))
             if cursor.fetchone():
                 cursor.close()
                 return RedirectResponse(url="/hr-management?error=Email already exists", status_code=status.HTTP_303_SEE_OTHER)
@@ -229,12 +249,12 @@ async def manage_employee(
             
         elif action == "edit":
             if new_email != email:
-                cursor.execute("SELECT email FROM employee_details WHERE email = %s AND email != %s", (new_email, email))
+                cursor.execute("SELECT email FROM employee_details WHERE LOWER(email) = LOWER(%s) AND LOWER(email) != LOWER(%s)", (new_email, email))
                 if cursor.fetchone():
                     cursor.close()
                     return RedirectResponse(url="/hr-management?error=Email already exists", status_code=status.HTTP_303_SEE_OTHER)
             
-            cursor.execute("SELECT name FROM employee_details WHERE LOWER(name) = LOWER(%s) AND email != %s", (name, email))
+            cursor.execute("SELECT name FROM employee_details WHERE LOWER(name) = LOWER(%s) AND LOWER(email) != LOWER(%s)", (name, email))
             if cursor.fetchone():
                 cursor.close()
                 return RedirectResponse(url="/hr-management?error=Employee name already exists", status_code=status.HTTP_303_SEE_OTHER)

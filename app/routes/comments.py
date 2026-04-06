@@ -49,8 +49,9 @@ async def get_my_comments(request: Request, db = Depends(get_db_connection)):
 async def get_unread_count(request: Request, db = Depends(get_db_connection)):
     """Get count of unread comments for HR notification badge."""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
-        raise HTTPException(status_code=403, detail="HR access required")
+    user_role = request.session.get("user_role", "employee")
+    if not user_email or user_role not in ["hq_admin", "office_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     
     count = get_unread_comment_count(db)
     return {"unread_count": count}

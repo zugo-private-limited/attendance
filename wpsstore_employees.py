@@ -11,16 +11,16 @@ These employees belong to the wpsstore (branch) account only
 wpsstore_users = {
     "Wholesalepriceshopping27@gmail.com": {
         "password": "WPS@123",
-        "name": "WPS Branch Admin",
-        "employee_number": "ADMIN001",
-        "phone": "",
-        "parent_phone": "",
+        "name": "WPS Admin",
+        "employee_number": "N/A",
+        "phone": "N/A",
+        "parent_phone": None,
         "job_role": "Office Admin",
-        "total_leave": 0,
+        "total_leave": 5,
         "total_working": 0,
         "address": "",
-        "aadhaar": "",
-        "pan": "",
+        "aadhar": "",
+        "pan_card": "",
         "dob": "",
         "gender": "",
         "native": ""
@@ -89,7 +89,7 @@ wpsstore_users = {
         "gender": "female",
         "native": "Anaimalai"
     },
-    "Rangeela@121gmail.com": {
+    "rangeela@121gmail.com": {
         "password": "Wps@12345",
         "name": "K.Rangeela Devi",
         "employee_number": "WPS005",
@@ -99,8 +99,8 @@ wpsstore_users = {
         "total_leave": 0,
         "total_working": 0,
         "address": "3/27/7, Rose garden, Suleeswaranpatti, Pollachi",
-        "aadhaar": "351346869209",
-        "pan": "FSJPR9338N",
+        "aadhar": "351346869209",
+        "pan_card": "FSJPR9338N",
         "dob": "",
         "gender": "Female",
         "native": "Pollachi"
@@ -137,7 +137,7 @@ wpsstore_users = {
         "gender": "female",
         "native": "Pollachi"
     },
-    "Hibamohamme04@gmail.com": {
+    "hibamohamme04@gmail.com": {
         "password": "Wps@12345",
         "name": "Hiba. S",
         "employee_number": "WPS008",
@@ -147,8 +147,8 @@ wpsstore_users = {
         "total_leave": 0,
         "total_working": 0,
         "address": "15/13-8 kls nagar, thozhilpettai, makkinampatti(po)",
-        "aadhaar": "649957673013",
-        "pan": "UCZPS0149K",
+        "aadhar": "649957673013",
+        "pan_card": "UCZPS0149K",
         "dob": "",
         "gender": "Female",
         "native": "Pollachi"

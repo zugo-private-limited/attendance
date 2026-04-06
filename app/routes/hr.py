@@ -28,6 +28,10 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
     user_email = request.session.get("user_email")
     office_id = request.session.get("office_id")
     user_role = request.session.get("user_role", "employee")
+
+    if office_id is None and user_role == "office_admin":
+        office_id = 2
+        request.session["office_id"] = office_id
     
     if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
@@ -36,6 +40,7 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     
     employees = fetch_employees_by_office(db, office_id)
+    employees = [emp for emp in employees if emp.get("job_role") != "Office Admin"]
     
     current_office = get_office_by_id(db, office_id) if office_id else None
     office_name = current_office["office_name"] if current_office else "All Offices"
@@ -64,14 +69,19 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             comment_record = cursor.fetchone()
             emp["last_comment"] = comment_record.get("comment") if comment_record else None
             
-            calculated_working_days, _, _ = calculate_working_days_and_leaves_for_employee(email, today, office_id)
-            emp["total_working"] = calculated_working_days
-            
-            # Calculate leave days dynamically (ignoring database value which may be incorrect)
-            calculated_leave_days = calculate_leave_days_for_employee(email, today, office_id)
-            emp["total_leave"] = calculated_leave_days
+            if office_id == 1:
+                calculated_working_days, _, _ = calculate_working_days_and_leaves_for_employee(email, today, office_id)
+                emp["total_working"] = calculated_working_days
+                
+                # Calculate leave days dynamically (ignoring database value which may be incorrect)
+                calculated_leave_days = calculate_leave_days_for_employee(email, today, office_id)
+                emp["total_leave"] = calculated_leave_days
+            else:
+                # For branch offices, preserve the stored totals instead of counting all month weekdays
+                emp["total_working"] = emp.get("total_working", 0)
+                emp["total_leave"] = emp.get("total_leave", 0)
         
-        static_data = static_users.get(emp['email'], {})
+        static_data = static_users.get(emp['email'].strip().lower(), {})
         emp['salary'] = static_data.get('salary', 'Not Set')
     
     cursor.close()
@@ -85,6 +95,7 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
         "all_offices": all_offices,
         "current_office_id": office_id
     })
+
 
 @router.post("/manual-attendance", response_class=RedirectResponse, summary="Add manual attendance record")
 async def manual_attendance(
@@ -144,7 +155,7 @@ async def manual_attendance(
             cursor.execute(
                 """UPDATE employee_details 
                    SET total_working = total_working + 1 
-                   WHERE email = %s""",
+                   WHERE lower(email) = lower(%s)""",
                 (employee_email,)
             )
         

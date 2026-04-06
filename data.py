@@ -74,7 +74,7 @@ def get_office_by_id(db, office_id: int) -> Optional[Dict]:
 def get_user_office_id(db, email: str) -> Optional[int]:
     """Get the office_id for a user"""
     cursor = db.cursor()
-    cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (email,))
+    cursor.execute("SELECT office_id FROM employee_details WHERE lower(email) = lower(%s)", (email,))
     result = cursor.fetchone()
     cursor.close()
     return result[0] if result else None
@@ -87,11 +87,11 @@ def get_user_role(db, email: str) -> str:
     - 'office_admin' if user is an office admin
     - 'employee' otherwise
     """
-    if email == config.HR_EMAIL:
+    if email.lower() == config.HR_EMAIL.lower():
         return "hq_admin"
     
     cursor = db.cursor()
-    cursor.execute("SELECT job_role FROM employee_details WHERE email = %s", (email,))
+    cursor.execute("SELECT job_role FROM employee_details WHERE lower(email) = lower(%s)", (email,))
     result = cursor.fetchone()
     cursor.close()
     
@@ -123,12 +123,14 @@ def fetch_employees_by_office(db, office_id: Optional[int]) -> List[Dict]:
         email = emp.get("email")
         static_user = None
         
-        # Check HQ employees first
-        if email and email in static_users:
-            static_user = static_users[email]
-        # Check wpsstore employees for branch offices
-        elif email and email in wpsstore_users:
-            static_user = wpsstore_users[email]
+        if email:
+            email_key = email.strip().lower()
+            # Check HQ employees first
+            if email_key in static_users:
+                static_user = static_users[email_key]
+            # Check wpsstore employees for branch offices
+            elif email_key in wpsstore_users:
+                static_user = wpsstore_users[email_key]
         
         if static_user:
             if not emp.get("phone"):
@@ -140,25 +142,26 @@ def fetch_employees_by_office(db, office_id: Optional[int]) -> List[Dict]:
             if not emp.get("gender"):
                 emp["gender"] = static_user.get("gender")
             if not emp.get("aadhar"):
-                emp["aadhar"] = static_user.get("aadhar")
+                emp["aadhar"] = static_user.get("aadhar") or static_user.get("aadhaar")
             if not emp.get("joining_date"):
                 emp["joining_date"] = static_user.get("joining_date")
             if not emp.get("pan_card"):
-                emp["pan_card"] = static_user.get("pan_card")
+                emp["pan_card"] = static_user.get("pan_card") or static_user.get("pan")
     
     return employees
 
 
 def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
     """Fetch a specific employee by email"""
+    user_email = email.strip().lower()
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cursor.execute("SELECT * FROM employee_details WHERE email = %s", (email,))
+    cursor.execute("SELECT * FROM employee_details WHERE lower(email) = lower(%s)", (user_email,))
     employee = cursor.fetchone()
     cursor.close()
     
     # If employee exists but has missing fields, fill them from static_users
     if employee:
-        static_user = static_users.get(email) or wpsstore_users.get(email)
+        static_user = static_users.get(employee.get('email', '').lower()) or wpsstore_users.get(employee.get('email', '').lower())
         if static_user:
             # Fill in any missing/null fields from static data
             if not employee.get("phone"):

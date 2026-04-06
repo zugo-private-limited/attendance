@@ -30,22 +30,27 @@ async def handle_login(
     db = Depends(get_db_connection)
 ):
     """Processes login form submission, authenticates user, and sets session."""
+    user_email = email.strip().lower()
+    password = password.strip()
+
     # Check if email is in allowed employees list or is an office admin
-    employee = fetch_employee_by_email(db, email)
+    employee = fetch_employee_by_email(db, user_email)
     if not employee:
         return RedirectResponse(url="/?error=Access+Denied:+Not+an+authorized+employee", status_code=status.HTTP_303_SEE_OTHER)
     
     if employee["password"] != password:
         return RedirectResponse(url="/?error=Invalid+Credentials", status_code=status.HTTP_303_SEE_OTHER)
     
-    request.session["user_email"] = email
+    request.session["user_email"] = user_email
     
     # Determine user role and set office_id
-    user_role = get_user_role(db, email)
+    user_role = get_user_role(db, user_email)
     request.session["user_role"] = user_role
     
     # Set office_id based on user assignment (ALWAYS set it, don't skip if None)
-    office_id = get_user_office_id(db, email)
+    office_id = get_user_office_id(db, user_email)
+    if office_id is None and user_role == "office_admin":
+        office_id = 2
     # Default to office 1 (HQ) if not found
     request.session["office_id"] = office_id if office_id else 1
     print(f"[Login] {email} → Role: {user_role}, Office: {request.session['office_id']}")

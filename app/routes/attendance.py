@@ -327,15 +327,66 @@ async def view_employee_attendance_report(
         "is_hr": True
     })
 
+@router.get("/api/attendance/{attendance_id}", summary="Get attendance record details")
+async def get_attendance_record(
+    attendance_id: int,
+    request: Request,
+    db = Depends(get_db_connection)
+):
+    """Fetch a specific attendance record for editing (HR and Office Admin)"""
+    user_email = request.session.get("user_email")
+    user_role = request.session.get("user_role", "employee")
+    office_id = request.session.get("office_id", 1)
+    
+    if not user_email or user_role not in ["hq_admin", "office_admin"]:
+        return {"error": "Unauthorized"}, 403
+    
+    try:
+        cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("SELECT id, user_email, action, event_time FROM attendance WHERE id = %s", (attendance_id,))
+        record = cursor.fetchone()
+        
+        if not record:
+            cursor.close()
+            return {"error": "Attendance record not found"}, 404
+        
+        # For office admin, verify the employee belongs to their office
+        if user_role == "office_admin":
+            cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (record["user_email"],))
+            emp_office = cursor.fetchone()
+            if not emp_office or emp_office["office_id"] != office_id:
+                cursor.close()
+                return {"error": "Cannot access attendance for employees from other offices"}, 403
+        
+        cursor.close()
+        
+        # Format the response
+        event_datetime = record["event_time"]
+        return {
+            "id": record["id"],
+            "user_email": record["user_email"],
+            "action": record["action"],
+            "event_time": event_datetime.isoformat() if event_datetime else None,
+            "attendance_date": event_datetime.date().isoformat() if event_datetime else None,
+            "attendance_time": event_datetime.time().isoformat() if event_datetime else None
+        }
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching attendance record: {str(e)}", exc_info=True)
+        return {"error": f"Failed to fetch attendance record: {str(e)}"}, 500
+
 @router.post("/attendance/{attendance_id}/delete", summary="Delete attendance record")
 async def delete_attendance_record(
     attendance_id: int,
     request: Request,
     db = Depends(get_db_connection)
 ):
-    """Delete an attendance record (HR only)"""
+    """Delete an attendance record (HR and Office Admin)"""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
+    user_role = request.session.get("user_role", "employee")
+    office_id = request.session.get("office_id", 1)
+    
+    if not user_email or user_role not in ["hq_admin", "office_admin"]:
         return {"success": False, "message": "Unauthorized"}
     
     try:
@@ -348,6 +399,14 @@ async def delete_attendance_record(
             return {"success": False, "message": "Attendance record not found"}
         
         user_email_emp, action = record
+        
+        # For office admin, verify the employee belongs to their office
+        if user_role == "office_admin":
+            cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (user_email_emp,))
+            emp_office = cursor.fetchone()
+            if not emp_office or emp_office[0] != office_id:
+                cursor.close()
+                return {"success": False, "message": "Cannot delete attendance for employees from other offices"}
         
         cursor.execute("DELETE FROM attendance WHERE id = %s", (attendance_id,))
         
@@ -377,9 +436,12 @@ async def update_attendance_record(
     action: str = Form(...),
     db = Depends(get_db_connection)
 ):
-    """Update an attendance record (HR only)"""
+    """Update an attendance record (HR and Office Admin)"""
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
+    user_role = request.session.get("user_role", "employee")
+    office_id = request.session.get("office_id", 1)
+    
+    if not user_email or user_role not in ["hq_admin", "office_admin"]:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     
     try:
@@ -395,6 +457,17 @@ async def update_attendance_record(
             )
         
         user_email_emp, old_action = record
+        
+        # For office admin, verify the employee belongs to their office
+        if user_role == "office_admin":
+            cursor.execute("SELECT office_id FROM employee_details WHERE email = %s", (user_email_emp,))
+            emp_office = cursor.fetchone()
+            if not emp_office or emp_office[0] != office_id:
+                cursor.close()
+                return RedirectResponse(
+                    url="/hr-management?error=Cannot edit attendance for employees from other offices",
+                    status_code=status.HTTP_303_SEE_OTHER
+                )
         
         # Parse new datetime
         event_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
