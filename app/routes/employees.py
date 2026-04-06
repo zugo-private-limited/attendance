@@ -47,6 +47,9 @@ async def employees_page(request: Request, db = Depends(get_db_connection)):
     if office_id != 1:
         all_employees = [emp for emp in all_employees if emp.get("email") != config.HR_EMAIL]
     
+    # Filter out office admins from the employee attendance list
+    all_employees = [emp for emp in all_employees if emp.get("job_role") != "Office Admin"]
+    
     current_office = get_office_by_id(db, office_id) if office_id else None
     office_name = current_office["office_name"] if current_office else "All Offices"
     
