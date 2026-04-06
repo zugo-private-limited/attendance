@@ -8,6 +8,7 @@ from typing import Optional, List, Dict
 # --- Local Imports ---
 import config
 from employees import users as static_users 
+from wpsstore_employees import wpsstore_users 
 from fastapi import HTTPException
 
 
@@ -120,8 +121,16 @@ def fetch_employees_by_office(db, office_id: Optional[int]) -> List[Dict]:
     # Fill in missing fields from static data
     for emp in employees:
         email = emp.get("email")
+        static_user = None
+        
+        # Check HQ employees first
         if email and email in static_users:
             static_user = static_users[email]
+        # Check wpsstore employees for branch offices
+        elif email and email in wpsstore_users:
+            static_user = wpsstore_users[email]
+        
+        if static_user:
             if not emp.get("phone"):
                 emp["phone"] = static_user.get("phone")
             if not emp.get("parent_phone"):
@@ -149,7 +158,7 @@ def fetch_employee_by_email(db, email: str) -> Optional[Dict]:
     
     # If employee exists but has missing fields, fill them from static_users
     if employee:
-        static_user = static_users.get(email)
+        static_user = static_users.get(email) or wpsstore_users.get(email)
         if static_user:
             # Fill in any missing/null fields from static data
             if not employee.get("phone"):

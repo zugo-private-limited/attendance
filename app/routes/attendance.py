@@ -243,13 +243,28 @@ async def view_employee_attendance_report(
     period: str = "30",
     db = Depends(get_db_connection)
 ):
-    """View attendance report for a specific employee (HR only)"""
+    """View attendance report for a specific employee (HR and Office Admins only)"""
     from fastapi import HTTPException
     templates = _get_templates()
     
     user_email = request.session.get("user_email")
-    if not user_email or user_email != config.HR_EMAIL:
+    user_office_id = request.session.get("office_id", 1)
+    user_role = request.session.get("user_role", "employee")
+    
+    if not user_email:
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    # Allow HQ admin or office admins to view reports
+    if user_role not in ["hq_admin", "office_admin"]:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    employee = fetch_employee_by_email(db, email)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Office admins can only view employees in their office
+    if user_role == "office_admin" and employee.get("office_id") != user_office_id:
+        raise HTTPException(status_code=403, detail="Access denied: Employee not in your office")
     
     employee = fetch_employee_by_email(db, email)
     if not employee:
