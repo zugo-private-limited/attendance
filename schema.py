@@ -67,7 +67,7 @@ def initialize_database_schema():
                     user_email VARCHAR(255) NOT NULL,
                     office_id INT DEFAULT 1,
                     action VARCHAR(50) NOT NULL,
-                    event_time TIMESTAMP NOT NULL,
+                    event_time TIMESTAMP WITH TIME ZONE NOT NULL,
                     latitude NUMERIC(10,7) NULL,
                     longitude NUMERIC(10,7) NULL,
                     location_text VARCHAR(255) NULL,

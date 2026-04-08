@@ -148,8 +148,9 @@ async def handle_attendance(
     current_time = now_ist.time()
     today = now_ist.date()
     
-    # Store as UTC for database
-    now_utc = datetime.now(pytz.UTC)
+    # Convert IST time to UTC for database storage
+    # This ensures consistent UTC storage regardless of server timezone
+    now_utc = now_ist.astimezone(pytz.UTC)
     
     cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(

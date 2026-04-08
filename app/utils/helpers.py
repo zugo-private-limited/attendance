@@ -55,8 +55,21 @@ def _build_report_for_user(db, user_email, days: int = 30):
 
     by_date = {}
     for r in rows:
-        # Convert UTC to IST for display
-        event_time_ist = r["event_time"].astimezone(IST) if r["event_time"].tzinfo else IST.localize(r["event_time"])
+        # Convert to IST for display
+        # Handle both timezone-aware and naive datetimes
+        event_time_utc = r["event_time"]
+        
+        if event_time_utc is None:
+            continue
+            
+        # If timezone-aware, convert to IST
+        if event_time_utc.tzinfo is not None:
+            event_time_ist = event_time_utc.astimezone(IST)
+        else:
+            # If naive, assume it's UTC and localize then convert
+            event_time_utc_aware = pytz.UTC.localize(event_time_utc)
+            event_time_ist = event_time_utc_aware.astimezone(IST)
+        
         d = event_time_ist.date().isoformat()
         by_date.setdefault(d, []).append({"event_time": event_time_ist, "action": r["action"]})
 
