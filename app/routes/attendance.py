@@ -473,11 +473,16 @@ async def update_attendance_record(
         # Parse new datetime
         event_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
         event_time = datetime.strptime(attendance_time, "%H:%M").time()
-        event_datetime = datetime.combine(event_date, event_time)
+        
+        # Create IST datetime from the entered time (user enters time in IST)
+        event_datetime_ist = datetime.combine(event_date, event_time).replace(tzinfo=IST)
+        
+        # Convert IST to UTC for database storage
+        event_datetime_utc = event_datetime_ist.astimezone(pytz.UTC)
         
         cursor.execute(
             "UPDATE attendance SET event_time = %s, action = %s WHERE id = %s",
-            (event_datetime, action, attendance_id)
+            (event_datetime_utc, action, attendance_id)
         )
         
         if old_action == "check-in" and action == "check-out":

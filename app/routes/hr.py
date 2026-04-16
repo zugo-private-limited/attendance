@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 import config
 from data import get_db_connection, fetch_employees_by_office, get_office_by_id, fetch_employee_by_email, get_all_offices, get_user_role
 from services import calculate_working_days_and_leaves_for_employee, calculate_leave_days_for_employee
-from app.utils.timezone import IST, get_ist_date
+from app.utils.timezone import IST, get_ist_date, get_ist_now
 from employees import users as static_users
 
 router = APIRouter()
@@ -137,7 +137,12 @@ async def manual_attendance(
         try:
             event_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
             event_time = datetime.strptime(attendance_time, "%H:%M").time()
-            event_datetime = datetime.combine(event_date, event_time)
+            
+            # Create IST datetime from the entered time (user enters time in IST)
+            event_datetime_ist = datetime.combine(event_date, event_time).replace(tzinfo=IST)
+            
+            # Convert IST to UTC for database storage
+            event_datetime_utc = event_datetime_ist.astimezone(pytz.UTC)
         except ValueError:
             return RedirectResponse(
                 url="/hr-management?error=Invalid date or time format",
@@ -148,7 +153,7 @@ async def manual_attendance(
         cursor.execute(
             """INSERT INTO attendance (user_email, action, event_time, latitude, longitude, location_text)
                VALUES (%s, %s, %s, %s, %s, %s)""",
-            (employee_email, action, event_datetime, None, None, "Manual Entry by HR")
+            (employee_email, action, event_datetime_utc, None, None, "Manual Entry by HR")
         )
         
         if action == "check-in":
@@ -162,7 +167,7 @@ async def manual_attendance(
         db.commit()
         cursor.close()
         
-        print(f"Manual attendance added: {employee_email} - {action} at {event_datetime} by {user_email}")
+        print(f"Manual attendance added: {employee_email} - {action} at {event_datetime_ist.strftime('%Y-%m-%d %I:%M %p IST')} by {user_email}")
         
         return RedirectResponse(
             url="/hr-management?success=Attendance record added successfully",
