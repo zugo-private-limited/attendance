@@ -315,25 +315,25 @@ users = {
 #         "total_leave": 0,
 #         "total_working": 0
 # # },
-#  "zugopvtsales.hr@gmail.com":{
-#      "password": "Kiruthika@123",
-#      "name" : "KIRUTHIKA VELLAICHAMY",
-#      "email": "zugopvtsales.hr@gmail.com",
-#      "photo": "",
-#      "joining_date": "09/02/2026",
-#      "employee_number": "ZPL025",
-#      "phone ": "6374046466 ",
-#      "parent_phone": " 9108544362",
-#      "dob": "30/11/2001 ",
-#      "gender": "Female",
-#      "job_role": "Sales HR",     
-#      "native": "Tirupur",
-#      "address": "Samundipuram , Tirupur ",
-#      "aadhar": "7237 5640 2533",
-#      "pan_card ": "CLDPV4384C ",
-#      "bank_details ": "1235170000011953" ,
-#      "salary": "40000",
-#      "total_leave": 0,
-#      "total_working": 0
-#  }      
+ "zugopvtsales.hr@gmail.com":{
+     "password": "Kiruthika@123",
+     "name" : "Binusha Binoy",
+     "email": "zugopvtsales.hr@gmail.com",
+     "photo": "",
+     "joining_date": " ",
+     "employee_number": "ZPL025",
+     "phone ": ":6369589070 ",
+     "parent_phone": " ",
+     "dob": "",
+     "gender": "Female",
+     "job_role": "Sales HR",     
+     "native": "Tirupur",
+     "address": " ",
+     "aadhar": "",
+     "pan_card ": " ",
+     "bank_details ": " " ,
+     "salary": " ",
+     "total_leave": 0,
+     "total_working": 0
+ }      
  }
