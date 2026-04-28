@@ -316,7 +316,7 @@ users = {
 #         "total_working": 0
 # # },
  "zugopvtsales.hr@gmail.com":{
-     "password": "Kiruthika@123",
+     "password": "Binusha@123",
      "name" : "Binusha Binoy",
      "email": "zugopvtsales.hr@gmail.com",
      "photo": "",
