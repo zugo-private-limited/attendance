@@ -271,5 +271,27 @@ users = {
         "salary": " ",
         "total_leave": 0,
         "total_working": 0
+    },
+    "yahyaayas193@gmail.com": {
+        "password": "Ayas@123",
+        "name": "YAHYA AYAS.R",
+        "email": "yahyaayas193@gmail.com",
+        "photo": "ayah.HEIC",
+        "joining_date": "20/07/2026",
+        "employee_number": "ZPL017",
+        "phone": "8754360314",
+        "parent_phone": "1234567890",
+        "dob": "06/04/2003",
+        "gender": "Male",
+        "job_role": "Creative team",
+        "native": "Tiruppur",
+        "address": "123, Main Street, Tiruppur, Tamil Nadu, 641604",
+        "aadhar": "1234 5678 9012",
+        "pan_card": "ABCDE1234F",
+        "bank_details": " ",
+        "salary": " ",
+        "total_leave": 0,
+        "total_working": 0
     }
+    
 }

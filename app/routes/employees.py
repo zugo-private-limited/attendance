@@ -3,6 +3,7 @@ import os
 import uuid
 import psycopg2
 import psycopg2.extras
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Request, Form, Depends, HTTPException, File, UploadFile, status
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -200,7 +201,7 @@ async def manage_employee(
 
     new_email = new_email.strip().lower()
     email = email.strip().lower()
-    employee_number = employee_number.strip()
+    employee_number = employee_number.strip() or None
     name = name.strip()
     
     try:
@@ -289,7 +290,17 @@ async def manage_employee(
         
         cursor.close()
         
+    except psycopg2.errors.UniqueViolation as err:
+        db.rollback()
+        print(f"Unique constraint error: {err}")
+        error_message = "Employee email or ID already exists"
+        if 'employee_number' in str(err).lower():
+            error_message = "Employee ID already exists"
+        elif 'email' in str(err).lower():
+            error_message = "Email already exists"
+        return RedirectResponse(url=f"/hr-management?error={quote_plus(error_message)}", status_code=status.HTTP_303_SEE_OTHER)
     except psycopg2.Error as err:
+        db.rollback()
         print(f"Database error: {err}")
         return RedirectResponse(url="/hr-management?error=Database error", status_code=status.HTTP_303_SEE_OTHER)
     
