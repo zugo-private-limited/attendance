@@ -69,17 +69,13 @@ async def hr_management(request: Request, db = Depends(get_db_connection)):
             comment_record = cursor.fetchone()
             emp["last_comment"] = comment_record.get("comment") if comment_record else None
             
-            if office_id == 1:
-                calculated_working_days, _, _ = calculate_working_days_and_leaves_for_employee(email, today, office_id)
-                emp["total_working"] = calculated_working_days
-                
-                # Calculate leave days dynamically (ignoring database value which may be incorrect)
-                calculated_leave_days = calculate_leave_days_for_employee(email, today, office_id)
-                emp["total_leave"] = calculated_leave_days
-            else:
-                # For branch offices, preserve the stored totals instead of counting all month weekdays
-                emp["total_working"] = emp.get("total_working", 0)
-                emp["total_leave"] = emp.get("total_leave", 0)
+            # Calculate working days dynamically for ALL offices (both head office and branch offices)
+            calculated_working_days, _, _ = calculate_working_days_and_leaves_for_employee(email, today, office_id)
+            emp["total_working"] = calculated_working_days
+            
+            # Calculate leave days dynamically (ignoring database value which may be incorrect)
+            calculated_leave_days = calculate_leave_days_for_employee(email, today, office_id)
+            emp["total_leave"] = calculated_leave_days
         
         static_data = static_users.get(emp['email'].strip().lower(), {})
         emp['salary'] = static_data.get('salary', 'Not Set')

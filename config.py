@@ -64,4 +64,4 @@ MONTHLY_REPORT_DAY = 20  # Day of the month to send report
 
 # Attendance Calculation Period (21st to 20th)
 ATTENDANCE_PERIOD_START_DAY = 21  # Start calculation from the 21st
-ATTENDANCE_PERIOD_END_DAY = 20    # End calculation on the 20th
+ATTENDANCE_PERIOD_END_DAY = 22    # End calculation on the 20th

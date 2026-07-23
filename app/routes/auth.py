@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 import config
 from data import get_db_connection, fetch_employee_by_email, get_user_role, get_user_office_id
 from employees import users as static_users
+
 from app.utils.helpers import _build_user_from_static
 
 router = APIRouter()
